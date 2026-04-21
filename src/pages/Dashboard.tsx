@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, TrendingUp, TrendingDown, Flame, Calendar, ChevronRight, Dumbbell, Trash2, Zap, Target, BarChart3, ArrowUpRight, Activity, Sun, Moon } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, Flame, Calendar, ChevronRight, Dumbbell, Trash2, Zap, Target, BarChart3, ArrowUpRight, Activity, Sun, Moon, Trophy } from 'lucide-react';
 import { AscendLogo } from '@/components/brand/AscendLogo';
 import { format, subDays, isAfter, isBefore, startOfWeek, startOfDay } from 'date-fns';
 import { Card, CardTitle, CardValue } from '@/components/ui/Card';
@@ -525,6 +525,21 @@ export function Dashboard() {
           </p>
         )}
       </div>
+
+      {/* Weekly Recap */}
+      <button
+        onClick={() => navigate('/recap')}
+        className="flex w-full items-center gap-3 rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-500/10 to-orange-500/10 px-4 py-3.5 text-left active:from-amber-500/15 active:to-orange-500/15 transition-colors"
+      >
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15">
+          <Trophy className="h-5 w-5 text-amber-400" />
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-zinc-200">Weekly Recap</p>
+          <p className="text-xs text-zinc-500">Your coaching report</p>
+        </div>
+        <ChevronRight className="h-4 w-4 text-zinc-600" />
+      </button>
 
       {/* Trash link */}
       {trashCount > 0 && (

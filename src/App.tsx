@@ -12,6 +12,7 @@ import { StepsPage } from '@/pages/Steps';
 import { SleepPage } from '@/pages/Sleep';
 import { Stats } from '@/pages/Stats';
 import { TrashPage } from '@/pages/Trash';
+import { WeeklyRecap } from '@/pages/WeeklyRecap';
 import { seedDatabase } from '@/db/seed';
 import { syncExerciseLibrary } from '@/db/database';
 import { ThemeProvider } from '@/hooks/useTheme';
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="/sleep" element={<SleepPage />} />
             <Route path="/stats" element={<Stats />} />
             <Route path="/trash" element={<TrashPage />} />
+            <Route path="/recap" element={<WeeklyRecap />} />
           </Route>
           <Route path="/workout/:id" element={<LiveWorkout />} />
         </Routes>

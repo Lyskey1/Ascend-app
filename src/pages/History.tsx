@@ -21,6 +21,7 @@ export function History() {
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [templateFilter, setTemplateFilter] = useState<string>('all');
+  const [nameFilter, setNameFilter] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   // Delete state
@@ -35,22 +36,20 @@ export function History() {
   const [editDurationM, setEditDurationM] = useState('');
   const [editNotes, setEditNotes] = useState('');
 
-  const filtered = useMemo(() => {
+  // Base filtered (date + template + search, before name filter)
+  const baseFiltered = useMemo(() => {
     let result = sessions;
 
-    // Date filter
     if (dateFilter !== 'all') {
       const days = dateFilter === '7d' ? 7 : dateFilter === '30d' ? 30 : 90;
       const cutoff = subDays(new Date(), days);
       result = result.filter((s) => isAfter(new Date(s.startedAt), cutoff));
     }
 
-    // Template filter
     if (templateFilter !== 'all') {
       result = result.filter((s) => s.templateId === templateFilter);
     }
 
-    // Search
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -63,14 +62,20 @@ export function History() {
     return result;
   }, [sessions, dateFilter, templateFilter, search]);
 
-  // Summary: workout frequency by template name
+  // Summary counts (from base, unaffected by name filter so counts stay accurate)
   const summary = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const s of filtered) {
+    for (const s of baseFiltered) {
       counts[s.templateName] = (counts[s.templateName] || 0) + 1;
     }
     return Object.entries(counts).sort(([, a], [, b]) => b - a);
-  }, [filtered]);
+  }, [baseFiltered]);
+
+  // Final filtered list (base + name filter from counter pills)
+  const filtered = useMemo(() => {
+    if (!nameFilter) return baseFiltered;
+    return baseFiltered.filter((s) => s.templateName === nameFilter);
+  }, [baseFiltered, nameFilter]);
 
   // Group by date
   const grouped = useMemo(() => {
@@ -207,17 +212,33 @@ export function History() {
         ))}
       </div>
 
-      {/* ─── Workout frequency summary ─────────────── */}
+      {/* ─── Workout frequency summary (interactive filters) ── */}
       {summary.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setNameFilter(null)}
+            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors ${
+              nameFilter === null
+                ? 'border-blue-500/60 bg-blue-500/15 text-blue-300'
+                : 'border-zinc-700/60 bg-zinc-800/40 text-zinc-400 active:bg-zinc-700/40'
+            }`}
+          >
+            <span className="text-[11px] font-medium">Total</span>
+            <span className={`text-[11px] font-bold ${nameFilter === null ? 'text-blue-200' : 'text-zinc-200'}`}>{baseFiltered.length}</span>
+          </button>
           {summary.map(([name, count]) => (
-            <div
+            <button
               key={name}
-              className="flex items-center gap-1.5 rounded-full border border-zinc-800/50 bg-zinc-900/30 px-2.5 py-1"
+              onClick={() => setNameFilter(nameFilter === name ? null : name)}
+              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors ${
+                nameFilter === name
+                  ? 'border-blue-500/60 bg-blue-500/15 text-blue-300'
+                  : 'border-zinc-800/50 bg-zinc-900/30 text-zinc-400 active:bg-zinc-800/40'
+              }`}
             >
-              <span className="text-[11px] text-zinc-400 truncate max-w-[140px]">{name}</span>
-              <span className="text-[11px] font-bold text-zinc-200">{count}</span>
-            </div>
+              <span className="text-[11px] truncate max-w-[140px]">{name}</span>
+              <span className={`text-[11px] font-bold ${nameFilter === name ? 'text-blue-200' : 'text-zinc-200'}`}>{count}</span>
+            </button>
           ))}
         </div>
       )}
