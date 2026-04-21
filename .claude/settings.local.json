@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npx --yes create-vite@latest tmp-app --template react-ts)",
+      "Bash(mv tmp-app/* tmp-app/.* .)",
+      "Bash(rm -rf tmp-app)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(kill %1)",
+      "Bash(timeout 5 npx vite --port 5199)",
+      "Bash(grep:*)",
+      "Bash(node -e \":*)",
+      "Bash(npx vite:*)",
+      "Bash(find /Users/maxime/Desktop/App Muscu/src -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.html \\\\\\))"
+    ]
+  }
+}
