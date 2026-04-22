@@ -384,8 +384,8 @@ export function StepsPage() {
                     fontSize: 12,
                     color: 'var(--color-zinc-100)',
                   }}
-                  formatter={(value: number, name: string) => [
-                    value.toLocaleString(),
+                  formatter={(value, name) => [
+                    (value as number).toLocaleString(),
                     name === 'ma' ? '7d avg' : 'Steps',
                   ]}
                   labelFormatter={(label) => label}

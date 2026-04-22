@@ -503,7 +503,7 @@ export function SleepPage() {
                     fontSize: 12,
                     color: 'var(--color-zinc-100)',
                   }}
-                  formatter={(value: number) => [value, 'Score']}
+                  formatter={(value) => [value as number, 'Score']}
                 />
                 <ReferenceLine y={stats.avgScore} stroke="var(--color-zinc-600)" strokeDasharray="4 4" />
                 <Line
@@ -549,8 +549,8 @@ export function SleepPage() {
                     fontSize: 12,
                     color: 'var(--color-zinc-100)',
                   }}
-                  formatter={(_: number, __: string, item: { payload: { duration: number } }) => [
-                    durationStr(item.payload.duration),
+                  formatter={(_v, _n, item) => [
+                    durationStr((item as unknown as { payload: { duration: number } }).payload.duration),
                     'Duration',
                   ]}
                 />
@@ -601,7 +601,7 @@ export function SleepPage() {
                     fontSize: 12,
                     color: 'var(--color-zinc-100)',
                   }}
-                  formatter={(value: number) => [minutesToTimeStr(value), 'Bedtime']}
+                  formatter={(value) => [minutesToTimeStr(value as number), 'Bedtime']}
                 />
                 {stats.avgBedtime !== null && (
                   <ReferenceLine y={stats.avgBedtime} stroke="var(--color-zinc-600)" strokeDasharray="4 4" />
