@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Dumbbell, Clock, Heart, BarChart3 } from 'lucide-react';
+import { Home, Dumbbell, Clock, Heart, BarChart3, Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
 
 const links = [
   { to: '/', icon: Home, label: 'Home' },
@@ -11,10 +12,11 @@ const links = [
 
 export function BottomNav() {
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-800/50 bg-zinc-950/90 backdrop-blur-xl">
-      <div className="mx-auto max-w-lg pt-1.5">
+      <div className="mx-auto flex max-w-lg items-center justify-center gap-2 pt-1.5">
         <p className="text-center text-[9px] tracking-wide text-zinc-600">
           Made by{' '}
           <a
@@ -26,6 +28,14 @@ export function BottomNav() {
             Lyskey
           </a>
         </p>
+        <span className="text-zinc-800">·</span>
+        <button
+          onClick={toggleTheme}
+          className="text-zinc-600 active:text-zinc-300 transition-colors"
+          aria-label="Toggle theme"
+        >
+          {theme === 'dark' ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
+        </button>
       </div>
       <div className="mx-auto flex max-w-lg items-center justify-around pb-[env(safe-area-inset-bottom)] px-2">
         {links.map(({ to, icon: Icon, label, matchPaths }) => {

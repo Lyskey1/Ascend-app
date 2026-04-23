@@ -1,13 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, TrendingUp, TrendingDown, Flame, Calendar, ChevronRight, Dumbbell, Trash2, Zap, Target, BarChart3, ArrowUpRight, Activity, Sun, Moon, Trophy } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, Flame, Calendar, ChevronRight, Dumbbell, Trash2, Zap, Target, BarChart3, ArrowUpRight, Activity, Trophy, Settings } from 'lucide-react';
 import { AscendLogo } from '@/components/brand/AscendLogo';
 import { format, subDays, isAfter, isBefore, startOfWeek, startOfDay } from 'date-fns';
 import { Card, CardTitle, CardValue } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Sheet } from '@/components/ui/Sheet';
 import { TemplateSelector } from '@/components/workout/TemplateSelector';
-import { useTheme } from '@/hooks/useTheme';
 import {
   getProgramStartDate,
   getRestDay,
@@ -33,7 +32,6 @@ import {
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [showModeChooser, setShowModeChooser] = useState(false);
   const [workoutMode, setWorkoutMode] = useState<'live' | 'past'>('live');
@@ -300,10 +298,10 @@ export function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={toggleTheme}
+            onClick={() => navigate('/settings')}
             className="rounded-full p-1.5 text-zinc-400 active:text-zinc-200 transition-colors"
           >
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            <Settings className="h-4 w-4" />
           </button>
           <div className="flex items-center gap-2 text-sm font-medium text-zinc-500">
             <Flame className="h-4 w-4 text-orange-500" />
