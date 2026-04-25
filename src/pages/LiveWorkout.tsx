@@ -315,9 +315,11 @@ export function LiveWorkout() {
             Cancel
           </Button>
           <div className="text-center">
-            <p className={`text-xs font-medium ${isComplete ? 'text-emerald-400' : 'text-zinc-400'}`}>
-              {completedSetsCount}/{totalSetsCount} sets · {progressPct}%
-            </p>
+            {totalSetsCount > 0 && (
+              <p className={`text-xs font-medium ${isComplete ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                {completedSetsCount}/{totalSetsCount} sets · {progressPct}%
+              </p>
+            )}
             {totalWeightMoved > 0 && (
               <p className="text-[10px] text-zinc-500 flex items-center justify-center gap-1">
                 <Dumbbell className="h-2.5 w-2.5" />
@@ -399,12 +401,14 @@ export function LiveWorkout() {
                   : formatElapsed()}
               </span>
             </div>
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-sm text-zinc-400">Sets completed</span>
-              <span className="font-semibold text-zinc-200">
-                {completedSetsCount} / {totalSetsCount}
-              </span>
-            </div>
+            {totalSetsCount > 0 && (
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-sm text-zinc-400">Sets completed</span>
+                <span className="font-semibold text-zinc-200">
+                  {completedSetsCount} / {totalSetsCount}
+                </span>
+              </div>
+            )}
             {totalWeightMoved > 0 && (
               <div className="mt-2 flex items-center justify-between">
                 <span className="text-sm text-zinc-400">Total weight</span>

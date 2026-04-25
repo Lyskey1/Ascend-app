@@ -161,13 +161,15 @@ function buildSessionExercises(
       exerciseName: ex?.name ?? 'Unknown',
       templateExerciseId: te.id,
       order: te.order,
-      sets: Array.from({ length: te.targetSets }, (_, i) => ({
-        id: crypto.randomUUID(),
-        setNumber: i + 1,
-        weight: null,
-        reps: null,
-        completed: false,
-      })),
+      sets: isCardio
+        ? []
+        : Array.from({ length: te.targetSets }, (_, i) => ({
+            id: crypto.randomUUID(),
+            setNumber: i + 1,
+            weight: null,
+            reps: null,
+            completed: false,
+          })),
       skipped: false,
       targetSets: te.targetSets,
       targetRepsMin: te.targetRepsMin,

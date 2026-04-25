@@ -64,18 +64,23 @@ export function CardioExerciseCard({
     );
   }
 
-  const isCompleted = exercise.sets[0]?.completed ?? false;
+  const hasLegacySets = exercise.sets.length > 0;
+  const isCompleted = hasLegacySets
+    ? (exercise.sets[0]?.completed ?? false)
+    : (exercise.cardioCompleted ?? false);
   const pace =
     exercise.cardioDuration && exercise.cardioDistance
       ? computePace(exercise.cardioDuration, exercise.cardioDistance)
       : exercise.cardioPace ?? '';
 
   const handleToggleComplete = () => {
-    const newSets = [...exercise.sets];
-    if (newSets[0]) {
+    if (hasLegacySets) {
+      const newSets = [...exercise.sets];
       newSets[0] = { ...newSets[0], completed: !newSets[0].completed };
+      onChange({ ...exercise, sets: newSets });
+    } else {
+      onChange({ ...exercise, cardioCompleted: !isCompleted });
     }
-    onChange({ ...exercise, sets: newSets });
   };
 
   const handleFieldChange = (field: string, value: number | string | undefined) => {

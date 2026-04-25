@@ -122,6 +122,7 @@ export interface WorkoutSessionExercise {
   cardioDistance?: number;
   cardioPace?: string;
   cardioIntensity?: 'very_easy' | 'easy' | 'moderate' | 'hard' | 'very_hard' | 'intervals';
+  cardioCompleted?: boolean;
   // Warm-up sets (strength exercises only)
   warmupSets?: WarmupSet[];
 }

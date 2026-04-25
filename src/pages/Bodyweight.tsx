@@ -114,6 +114,10 @@ function saveChartMode(mode: ChartDisplayMode) {
   localStorage.setItem(LS_KEYS.chartMode, mode);
 }
 
+function parseDecimalInput(value: string): number {
+  return parseFloat(value.replace(',', '.'));
+}
+
 function hexToRgba(hex: string, alpha: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -421,7 +425,7 @@ export function BodyweightPage() {
   };
 
   const handleAdd = async () => {
-    const w = parseFloat(formWeight);
+    const w = parseDecimalInput(formWeight);
     if (isNaN(w) || w <= 0) return;
 
     const date = addMode === 'quick' ? format(new Date(), 'yyyy-MM-dd') : formDate;
@@ -462,7 +466,7 @@ export function BodyweightPage() {
 
   const handleEdit = async () => {
     if (!editingEntry) return;
-    const w = parseFloat(formWeight);
+    const w = parseDecimalInput(formWeight);
     if (isNaN(w) || w <= 0) return;
 
     await updateBodyweightEntry(editingEntry.id, {
@@ -492,8 +496,8 @@ export function BodyweightPage() {
   };
 
   const handleSaveTargetRange = () => {
-    const min = parseFloat(targetMin);
-    const max = parseFloat(targetMax);
+    const min = parseDecimalInput(targetMin);
+    const max = parseDecimalInput(targetMax);
     if (!isNaN(min) && !isNaN(max) && min < max) {
       const r = { min, max };
       setTargetRange(r);
@@ -903,8 +907,9 @@ export function BodyweightPage() {
           <div>
             <label className="text-xs font-medium text-zinc-500">Weight (kg)</label>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
+              pattern="[0-9]*[.,]?[0-9]*"
               value={formWeight}
               onChange={(e) => setFormWeight(e.target.value)}
               placeholder={latest?.weight.toString() ?? '80.0'}
@@ -968,8 +973,9 @@ export function BodyweightPage() {
             <div>
               <label className="text-xs font-medium text-zinc-500">Weight (kg)</label>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
+                pattern="[0-9]*[.,]?[0-9]*"
                 value={formWeight}
                 onChange={(e) => setFormWeight(e.target.value)}
                 autoFocus
@@ -1032,8 +1038,9 @@ export function BodyweightPage() {
             <div>
               <label className="text-xs font-medium text-zinc-500">Min (kg)</label>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
+                pattern="[0-9]*[.,]?[0-9]*"
                 value={targetMin}
                 onChange={(e) => setTargetMin(e.target.value)}
                 placeholder="e.g. 78"
@@ -1043,8 +1050,9 @@ export function BodyweightPage() {
             <div>
               <label className="text-xs font-medium text-zinc-500">Max (kg)</label>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
+                pattern="[0-9]*[.,]?[0-9]*"
                 value={targetMax}
                 onChange={(e) => setTargetMax(e.target.value)}
                 placeholder="e.g. 82"
