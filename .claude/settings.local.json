@@ -25,7 +25,14 @@
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5176/src/components/workout/ExerciseCard.tsx)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5176/src/pages/HistoryDetail.tsx)",
       "Bash(curl -s http://localhost:5176/src/lib/timebased.ts)",
-      "Bash(curl -s http://localhost:5176/src/components/workout/SetRow.tsx)"
+      "Bash(curl -s http://localhost:5176/src/components/workout/SetRow.tsx)",
+      "Bash(curl -s -o /dev/null -w \"DecimalInput.tsx: %{http_code}\\\\n\" http://localhost:5176/src/components/ui/DecimalInput.tsx)",
+      "Bash(curl -s -o /dev/null -w \"HistoryDetail.tsx: %{http_code}\\\\n\" http://localhost:5176/src/pages/HistoryDetail.tsx)",
+      "Bash(curl -s -o /dev/null -w \"SetRow.tsx:        %{http_code}\\\\n\" http://localhost:5176/src/components/workout/SetRow.tsx)",
+      "Bash(curl -s -o /dev/null -w \"ExerciseCard.tsx:  %{http_code}\\\\n\" http://localhost:5176/src/components/workout/ExerciseCard.tsx)",
+      "Bash(curl -s -o /dev/null -w \"CardioExerciseCd:  %{http_code}\\\\n\" http://localhost:5176/src/components/workout/CardioExerciseCard.tsx)",
+      "Bash(curl -s http://localhost:5176/src/pages/HistoryDetail.tsx)",
+      "Bash(curl -s \"http://localhost:5176/src/components/ui/DecimalInput.tsx\")"
     ]
   }
 }

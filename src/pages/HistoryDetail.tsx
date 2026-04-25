@@ -13,7 +13,7 @@ import {
   type ExerciseSet,
   type WarmupSet,
 } from '@/db/types';
-import { parseDecimalInput, DECIMAL_INPUT_PATTERN } from '@/lib/decimal';
+import { DecimalInput } from '@/components/ui/DecimalInput';
 import { resolveSetDurationSeconds } from '@/lib/timebased';
 
 const INTENSITY_KEYS = ['very_easy', 'easy', 'moderate', 'hard', 'very_hard', 'intervals'] as const;
@@ -182,17 +182,23 @@ export function HistoryDetail() {
 
   return (
     <div className="pb-32">
-      {/* Header */}
-      <div className="sticky top-0 z-40 border-b border-zinc-800/50 bg-zinc-950/95 backdrop-blur-sm">
-        <div className="flex items-center gap-3 px-4 py-3">
+      {/* Header — pt-[env(safe-area-inset-top)] keeps the row clear of the
+          iPhone status bar (time/battery/signal). The flex row uses py-2 so
+          that, combined with min 40×40 touch targets, the visible header height
+          stays close to the original. */}
+      <div
+        className="sticky top-0 z-40 border-b border-zinc-800/50 bg-zinc-950/95 backdrop-blur-sm pt-[env(safe-area-inset-top)]"
+      >
+        <div className="flex items-center gap-3 px-4 py-2">
           <button
             onClick={() => (editing ? cancelEdit() : navigate(-1))}
-            className="rounded-full p-1.5 text-zinc-400 active:text-zinc-200"
+            aria-label="Back"
+            className="-ml-2 inline-flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 active:text-zinc-200"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <div className="flex-1">
-            <p className="font-semibold text-zinc-200">{view.templateName}</p>
+          <div className="flex-1 min-w-0">
+            <p className="truncate font-semibold text-zinc-200">{view.templateName}</p>
             <p className="text-xs text-zinc-500">
               {format(new Date(view.startedAt), 'EEEE, MMM d, yyyy')}
             </p>
@@ -200,8 +206,8 @@ export function HistoryDetail() {
           {!editing ? (
             <button
               onClick={startEdit}
-              className="rounded-full p-1.5 text-zinc-400 active:text-zinc-200"
               aria-label="Edit performance"
+              className="-mr-2 inline-flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 active:text-zinc-200"
             >
               <Pencil className="h-5 w-5" />
             </button>
@@ -502,35 +508,6 @@ function StrengthReadOnly({ exercise }: { exercise: WorkoutSessionExercise }) {
 }
 
 // ─────────────────────────── Editors ────────────────────────────────────
-
-function DecimalInput({
-  value,
-  placeholder,
-  className,
-  onChange,
-}: {
-  value: number | null | undefined;
-  placeholder?: string;
-  className?: string;
-  onChange: (v: number | null) => void;
-}) {
-  return (
-    <input
-      type="text"
-      inputMode="decimal"
-      pattern={DECIMAL_INPUT_PATTERN}
-      placeholder={placeholder}
-      value={value ?? ''}
-      onChange={(e) => {
-        const raw = e.target.value;
-        if (raw === '') return onChange(null);
-        const n = parseDecimalInput(raw);
-        onChange(isNaN(n) ? null : n);
-      }}
-      className={className}
-    />
-  );
-}
 
 function IntegerInput({
   value,

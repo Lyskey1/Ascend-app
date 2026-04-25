@@ -18,6 +18,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Sheet } from '@/components/ui/Sheet';
+import { DecimalInput } from '@/components/ui/DecimalInput';
 
 // ─── Helpers ────────────────────────────────────────────
 
@@ -317,9 +318,10 @@ function CardioFields({
           </div>
           <div>
             <label className="text-[10px] text-zinc-600">Distance (km)</label>
-            <input type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*"
-              value={te.cardioDistance || ''} onFocus={(e) => e.target.select()}
-              onChange={(e) => { const raw = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.'); handleDistanceChange(raw === '' ? 0 : parseFloat(raw) || 0); }}
+            <DecimalInput
+              value={te.cardioDistance ?? null}
+              onFocus={(e) => e.target.select()}
+              onChange={(n) => handleDistanceChange(n ?? 0)}
               className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-2 py-1.5 text-center text-xs text-zinc-100 outline-none" />
           </div>
         </div>

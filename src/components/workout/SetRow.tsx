@@ -1,7 +1,7 @@
 import { type ExerciseSet, type SetProgressComparison } from '@/db/types';
 import { Check } from 'lucide-react';
-import { parseDecimalInput, DECIMAL_INPUT_PATTERN } from '@/lib/decimal';
 import { resolveSetDurationSeconds } from '@/lib/timebased';
+import { DecimalInput } from '@/components/ui/DecimalInput';
 
 interface SetRowProps {
   set: ExerciseSet;
@@ -169,18 +169,10 @@ export function SetRow({ set, prevSet, comparison, isTimeBased, onChange, onComp
         )}
 
         {/* Weight input */}
-        <input
-          type="text"
-          inputMode="decimal"
-          pattern={DECIMAL_INPUT_PATTERN}
+        <DecimalInput
           placeholder="kg"
-          value={set.weight ?? ''}
-          onChange={(e) => {
-            const raw = e.target.value;
-            if (raw === '') return onChange({ weight: null });
-            const n = parseDecimalInput(raw);
-            onChange({ weight: isNaN(n) ? null : n });
-          }}
+          value={set.weight}
+          onChange={(n) => onChange({ weight: n })}
           className="w-16 rounded-lg bg-zinc-800/50 px-2.5 py-2 text-center text-sm font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-zinc-500 transition-all"
         />
 

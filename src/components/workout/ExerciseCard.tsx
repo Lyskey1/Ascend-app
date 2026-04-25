@@ -6,7 +6,7 @@ import { SetRow } from './SetRow';
 import { RestTimer, type RestTimerHandle } from './RestTimer';
 import { compareSetProgress } from '@/hooks/useWorkout';
 import { Button } from '@/components/ui/Button';
-import { parseDecimalInput, DECIMAL_INPUT_PATTERN } from '@/lib/decimal';
+import { DecimalInput } from '@/components/ui/DecimalInput';
 import { resolveSetDurationSeconds } from '@/lib/timebased';
 
 function formatWarmupDuration(totalSeconds: number): string {
@@ -256,18 +256,10 @@ export function ExerciseCard({
             {exercise.warmupSets!.map((ws, i) => (
               <div key={ws.id} className="flex items-center gap-2 rounded-lg bg-zinc-900/40 px-2 py-1.5">
                 <span className="w-7 text-center text-[10px] font-bold text-amber-500/60">W{i + 1}</span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  pattern={DECIMAL_INPUT_PATTERN}
+                <DecimalInput
                   placeholder="kg"
-                  value={ws.weight ?? ''}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    if (raw === '') return handleWarmupSetChange(i, { weight: null });
-                    const n = parseDecimalInput(raw);
-                    handleWarmupSetChange(i, { weight: isNaN(n) ? null : n });
-                  }}
+                  value={ws.weight}
+                  onChange={(n) => handleWarmupSetChange(i, { weight: n })}
                   className="w-16 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-amber-500/40 transition-all"
                 />
                 <input
