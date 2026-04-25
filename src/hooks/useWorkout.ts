@@ -109,30 +109,40 @@ export function compareSetProgress(
   currentReps: number | null,
   prevWeight: number | null,
   prevReps: number | null,
+  currentDuration: number | null = null,
+  prevDuration: number | null = null,
 ): SetProgressComparison {
   const result: SetProgressComparison = {
     weight: 'none',
     reps: 'none',
+    duration: 'none',
     weightDiff: null,
     repsDiff: null,
+    durationDiff: null,
   };
 
-  if (currentWeight == null || prevWeight == null) return result;
-
-  // Weight comparison
-  if (currentWeight > prevWeight) {
-    result.weight = 'up';
-    result.weightDiff = currentWeight - prevWeight;
-  } else if (currentWeight < prevWeight) {
-    result.weight = 'down';
-    result.weightDiff = currentWeight - prevWeight;
-  } else {
-    result.weight = 'same';
-    result.weightDiff = 0;
+  // Weight comparison (works for any exercise type that logs weight)
+  if (currentWeight != null && prevWeight != null) {
+    if (currentWeight > prevWeight) {
+      result.weight = 'up';
+      result.weightDiff = currentWeight - prevWeight;
+    } else if (currentWeight < prevWeight) {
+      result.weight = 'down';
+      result.weightDiff = currentWeight - prevWeight;
+    } else {
+      result.weight = 'same';
+      result.weightDiff = 0;
+    }
   }
 
-  // Reps comparison — only when weight is the same
-  if (currentReps != null && prevReps != null && currentWeight === prevWeight) {
+  // Reps comparison — only meaningful when weight is identical
+  if (
+    currentReps != null &&
+    prevReps != null &&
+    currentWeight != null &&
+    prevWeight != null &&
+    currentWeight === prevWeight
+  ) {
     if (currentReps > prevReps) {
       result.reps = 'up';
       result.repsDiff = currentReps - prevReps;
@@ -142,6 +152,21 @@ export function compareSetProgress(
     } else {
       result.reps = 'same';
       result.repsDiff = 0;
+    }
+  }
+
+  // Duration comparison (time-based exercises). Compared independently of
+  // weight so weighted time-based sets can surface both axes.
+  if (currentDuration != null && prevDuration != null) {
+    if (currentDuration > prevDuration) {
+      result.duration = 'up';
+      result.durationDiff = currentDuration - prevDuration;
+    } else if (currentDuration < prevDuration) {
+      result.duration = 'down';
+      result.durationDiff = currentDuration - prevDuration;
+    } else {
+      result.duration = 'same';
+      result.durationDiff = 0;
     }
   }
 
@@ -176,6 +201,7 @@ function buildSessionExercises(
       targetRepsMax: te.targetRepsMax,
       restSeconds: te.restSeconds,
       exerciseType: ex?.exerciseType,
+      isTimeBased: ex?.isTimeBased,
       ...(isCardio
         ? {
             cardioDuration: te.cardioDuration,

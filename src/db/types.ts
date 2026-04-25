@@ -49,6 +49,9 @@ export interface Exercise {
   secondaryMuscles?: MuscleGroup[];
   category: WorkoutCategory;
   exerciseType?: ExerciseType;
+  // True for exercises measured by hold time per set (e.g. Plank, L-Sit).
+  // Reusable for any future time-based exercise.
+  isTimeBased?: boolean;
   isCustom?: boolean;
   sortOrder?: number;
   mediaUrl?: string;
@@ -118,6 +121,7 @@ export interface WorkoutSessionExercise {
   restSeconds: number;
   // Cardio fields (carried from template, editable during session)
   exerciseType?: ExerciseType;
+  isTimeBased?: boolean;
   cardioDuration?: number;
   cardioDistance?: number;
   cardioPace?: string;
@@ -131,6 +135,7 @@ export interface WarmupSet {
   id: string;
   weight: number | null;
   reps: number | null;
+  durationSeconds?: number | null;
 }
 
 export interface ExerciseSet {
@@ -138,6 +143,9 @@ export interface ExerciseSet {
   setNumber: number;
   weight: number | null;
   reps: number | null;
+  // Used by time-based exercises (e.g. Plank). Coexists with reps so that
+  // legacy entries (where reps held a hold-count) keep rendering correctly.
+  durationSeconds?: number | null;
   completed: boolean;
   note?: string;
 }
@@ -268,12 +276,16 @@ export interface TrashItem {
   deletedAt: string;
 }
 
-// Per-set progression comparison (weight + reps independently)
+// Per-set progression comparison (weight + reps + duration).
+// Duration is compared independently from weight so weighted time-based work
+// (e.g. weighted plank) can surface both axes at once.
 export interface SetProgressComparison {
   weight: 'up' | 'down' | 'same' | 'none';
   reps: 'up' | 'down' | 'same' | 'none';
+  duration: 'up' | 'down' | 'same' | 'none';
   weightDiff: number | null;
   repsDiff: number | null;
+  durationDiff: number | null; // seconds
 }
 
 export const SESSION_TAG_LABELS: Record<SessionTag, string> = {

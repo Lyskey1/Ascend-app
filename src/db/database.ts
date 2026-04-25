@@ -112,7 +112,7 @@ export const db = new IronDB();
 // present regardless of migration state.
 
 const LIBRARY_VERSION_KEY = 'iron_exercise_library_v';
-const CURRENT_LIBRARY_VERSION = '3'; // bump when exerciseLibrary.ts changes
+const CURRENT_LIBRARY_VERSION = '4'; // bump when exerciseLibrary.ts changes
 
 export async function syncExerciseLibrary() {
   const stored = localStorage.getItem(LIBRARY_VERSION_KEY);
@@ -139,6 +139,7 @@ export async function syncExerciseLibrary() {
           secondaryMuscles: libEx.secondaryMuscles,
           category: libEx.category,
           exerciseType: libEx.exerciseType,
+          isTimeBased: libEx.isTimeBased,
         });
       }
     }

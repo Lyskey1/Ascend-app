@@ -4,6 +4,7 @@ import {
   Eye, Target, GripVertical, ChevronLeft,
 } from 'lucide-react';
 import { format, subDays, isAfter } from 'date-fns';
+import { parseDecimalInput, DECIMAL_INPUT_PATTERN } from '@/lib/decimal';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
@@ -112,10 +113,6 @@ function loadChartMode(): ChartDisplayMode {
 
 function saveChartMode(mode: ChartDisplayMode) {
   localStorage.setItem(LS_KEYS.chartMode, mode);
-}
-
-function parseDecimalInput(value: string): number {
-  return parseFloat(value.replace(',', '.'));
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -909,7 +906,7 @@ export function BodyweightPage() {
             <input
               type="text"
               inputMode="decimal"
-              pattern="[0-9]*[.,]?[0-9]*"
+              pattern={DECIMAL_INPUT_PATTERN}
               value={formWeight}
               onChange={(e) => setFormWeight(e.target.value)}
               placeholder={latest?.weight.toString() ?? '80.0'}
@@ -975,7 +972,7 @@ export function BodyweightPage() {
               <input
                 type="text"
                 inputMode="decimal"
-                pattern="[0-9]*[.,]?[0-9]*"
+                pattern={DECIMAL_INPUT_PATTERN}
                 value={formWeight}
                 onChange={(e) => setFormWeight(e.target.value)}
                 autoFocus
@@ -1040,7 +1037,7 @@ export function BodyweightPage() {
               <input
                 type="text"
                 inputMode="decimal"
-                pattern="[0-9]*[.,]?[0-9]*"
+                pattern={DECIMAL_INPUT_PATTERN}
                 value={targetMin}
                 onChange={(e) => setTargetMin(e.target.value)}
                 placeholder="e.g. 78"
@@ -1052,7 +1049,7 @@ export function BodyweightPage() {
               <input
                 type="text"
                 inputMode="decimal"
-                pattern="[0-9]*[.,]?[0-9]*"
+                pattern={DECIMAL_INPUT_PATTERN}
                 value={targetMax}
                 onChange={(e) => setTargetMax(e.target.value)}
                 placeholder="e.g. 82"

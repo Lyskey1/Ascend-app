@@ -6,6 +6,14 @@ import { SetRow } from './SetRow';
 import { RestTimer, type RestTimerHandle } from './RestTimer';
 import { compareSetProgress } from '@/hooks/useWorkout';
 import { Button } from '@/components/ui/Button';
+import { parseDecimalInput, DECIMAL_INPUT_PATTERN } from '@/lib/decimal';
+import { resolveSetDurationSeconds } from '@/lib/timebased';
+
+function formatWarmupDuration(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}m ${s.toString().padStart(2, '0')}s`;
+}
 
 interface ExerciseCardProps {
   exercise: WorkoutSessionExercise;
@@ -39,6 +47,10 @@ export function ExerciseCard({
     : warmupDismissed
       ? 'declined'
       : 'prompt';
+
+  const isTimeBased = !!exercise.isTimeBased;
+  const prevWarmupSets = prevExercise?.warmupSets ?? [];
+  const hasPrevWarmup = prevWarmupSets.length > 0;
 
   if (exercise.skipped) {
     return (
@@ -76,11 +88,14 @@ export function ExerciseCard({
   const getComparison = (setIndex: number): SetProgressComparison => {
     const currentSet = exercise.sets[setIndex];
     const prevSet = prevExercise?.sets[setIndex];
+    const isTime = !!exercise.isTimeBased;
     return compareSetProgress(
       currentSet.weight,
       currentSet.reps,
       prevSet?.weight ?? null,
       prevSet?.reps ?? null,
+      resolveSetDurationSeconds(currentSet, isTime),
+      resolveSetDurationSeconds(prevSet ?? null, isTime),
     );
   };
 
@@ -184,6 +199,32 @@ export function ExerciseCard({
         </AnimatePresence>
       </div>
 
+      {/* ── Previous warm-up summary ─────────────────── */}
+      {hasPrevWarmup && warmupState !== 'declined' && (
+        <div className="mx-3 mb-2 rounded-xl bg-zinc-800/20 px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+            Previous warm-up
+          </p>
+          <ul className="mt-1 space-y-0.5">
+            {prevWarmupSets.map((ws, i) => {
+              if (isTimeBased) {
+                const secs = resolveSetDurationSeconds(ws, true);
+                return (
+                  <li key={ws.id ?? i} className="text-xs text-zinc-400">
+                    {secs != null ? formatWarmupDuration(secs) : '—'}
+                  </li>
+                );
+              }
+              return (
+                <li key={ws.id ?? i} className="text-xs text-zinc-400">
+                  {`${ws.weight ?? '—'} kg × ${ws.reps ?? '—'}`}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       {/* ── Warm-up prompt ──────────────────────────── */}
       {warmupState === 'prompt' && (
         <div className="mx-3 mb-2 flex items-center justify-between rounded-xl bg-zinc-800/30 px-3 py-2">
@@ -216,23 +257,29 @@ export function ExerciseCard({
               <div key={ws.id} className="flex items-center gap-2 rounded-lg bg-zinc-900/40 px-2 py-1.5">
                 <span className="w-7 text-center text-[10px] font-bold text-amber-500/60">W{i + 1}</span>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
+                  pattern={DECIMAL_INPUT_PATTERN}
                   placeholder="kg"
                   value={ws.weight ?? ''}
-                  onChange={(e) =>
-                    handleWarmupSetChange(i, { weight: e.target.value ? Number(e.target.value) : null })
-                  }
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === '') return handleWarmupSetChange(i, { weight: null });
+                    const n = parseDecimalInput(raw);
+                    handleWarmupSetChange(i, { weight: isNaN(n) ? null : n });
+                  }}
                   className="w-16 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-amber-500/40 transition-all"
                 />
                 <input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="reps"
                   value={ws.reps ?? ''}
-                  onChange={(e) =>
-                    handleWarmupSetChange(i, { reps: e.target.value ? Number(e.target.value) : null })
-                  }
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9]/g, '');
+                    handleWarmupSetChange(i, { reps: raw === '' ? null : Number(raw) });
+                  }}
                   className="w-14 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-amber-500/40 transition-all"
                 />
                 <button
@@ -267,8 +314,14 @@ export function ExerciseCard({
         <div className="flex items-center gap-3 px-3 py-1">
           <span className="w-6 text-center text-[10px] font-semibold uppercase text-zinc-600">Set</span>
           <span className="w-20 text-[10px] font-semibold uppercase text-zinc-600">Previous</span>
-          <span className="w-16 text-center text-[10px] font-semibold uppercase text-zinc-600">kg</span>
-          <span className="w-14 text-center text-[10px] font-semibold uppercase text-zinc-600">Reps</span>
+          {isTimeBased ? (
+            <span className="text-[10px] font-semibold uppercase text-zinc-600">Duration (mm : ss)</span>
+          ) : (
+            <>
+              <span className="w-16 text-center text-[10px] font-semibold uppercase text-zinc-600">kg</span>
+              <span className="w-14 text-center text-[10px] font-semibold uppercase text-zinc-600">Reps</span>
+            </>
+          )}
           <span className="w-9" />
         </div>
 
@@ -278,6 +331,7 @@ export function ExerciseCard({
             set={set}
             prevSet={prevExercise?.sets[i] ?? null}
             comparison={getComparison(i)}
+            isTimeBased={isTimeBased}
             onChange={(updates) => handleSetChange(i, updates)}
             onComplete={() => handleSetComplete(i)}
           />
@@ -289,6 +343,7 @@ export function ExerciseCard({
         <RestTimer
           ref={timerRef}
           defaultSeconds={exercise.restSeconds}
+          persistKey={`rest-${exercise.id}`}
         />
       </div>
 

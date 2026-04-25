@@ -14,7 +14,18 @@
       "Bash(node -e \":*)",
       "Bash(npx vite:*)",
       "Bash(find /Users/maxime/Desktop/App Muscu/src -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.html \\\\\\))",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(git stash *)",
+      "Bash(node --input-type=module -e ' *)",
+      "Bash(npm run *)",
+      "Bash(echo \"started pid $!\")",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" http://localhost:5176/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5176/src/components/workout/SetRow.tsx)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5176/src/lib/timebased.ts)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5176/src/components/workout/ExerciseCard.tsx)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5176/src/pages/HistoryDetail.tsx)",
+      "Bash(curl -s http://localhost:5176/src/lib/timebased.ts)",
+      "Bash(curl -s http://localhost:5176/src/components/workout/SetRow.tsx)"
     ]
   }
 }

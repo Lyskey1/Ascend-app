@@ -1131,6 +1131,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     secondaryMuscles: ['shoulders'],
     category: 'full_body',
     exerciseType: 'bodyweight',
+    isTimeBased: true,
   },
   {
     id: 'ex-side-plank',
@@ -1138,6 +1139,7 @@ export const EXERCISE_LIBRARY: Exercise[] = [
     primaryMuscle: 'abs',
     category: 'full_body',
     exerciseType: 'bodyweight',
+    isTimeBased: true,
   },
   {
     id: 'ex-russian-twist',

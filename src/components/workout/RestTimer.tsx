@@ -9,13 +9,14 @@ export interface RestTimerHandle {
 
 interface RestTimerProps {
   defaultSeconds: number;
+  persistKey?: string;
   onComplete?: () => void;
 }
 
 export const RestTimer = forwardRef<RestTimerHandle, RestTimerProps>(
-  function RestTimer({ defaultSeconds, onComplete }, ref) {
+  function RestTimer({ defaultSeconds, persistKey, onComplete }, ref) {
     const { seconds, isRunning, isComplete, progress, start, pause, resume, reset, skip } =
-      useTimer(defaultSeconds);
+      useTimer(defaultSeconds, persistKey);
 
     useImperativeHandle(ref, () => ({
       start: (secs: number) => start(secs),

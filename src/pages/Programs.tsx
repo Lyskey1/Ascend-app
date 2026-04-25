@@ -317,9 +317,9 @@ function CardioFields({
           </div>
           <div>
             <label className="text-[10px] text-zinc-600">Distance (km)</label>
-            <input type="text" inputMode="decimal"
+            <input type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*"
               value={te.cardioDistance || ''} onFocus={(e) => e.target.select()}
-              onChange={(e) => { const raw = e.target.value.replace(/[^0-9.]/g, ''); handleDistanceChange(raw === '' ? 0 : parseFloat(raw) || 0); }}
+              onChange={(e) => { const raw = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.'); handleDistanceChange(raw === '' ? 0 : parseFloat(raw) || 0); }}
               className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-2 py-1.5 text-center text-xs text-zinc-100 outline-none" />
           </div>
         </div>
@@ -1300,10 +1300,10 @@ export function Programs() {
                                 ))}
                                 <div>
                                   <label className="text-[10px] text-zinc-600">Rest (min)</label>
-                                  <input type="text" inputMode="decimal"
+                                  <input type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*"
                                     value={te.restSeconds ? (te.restSeconds / 60).toString().replace(/\.?0+$/, '') : ''}
                                     onFocus={(e) => e.target.select()}
-                                    onChange={(e) => { const raw = e.target.value.replace(/[^0-9.]/g, ''); const mins = raw === '' ? 0 : parseFloat(raw); handleUpdateExercise(idx, { restSeconds: Math.round((isNaN(mins) ? 0 : mins) * 60) }); }}
+                                    onChange={(e) => { const raw = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.'); const mins = raw === '' ? 0 : parseFloat(raw); handleUpdateExercise(idx, { restSeconds: Math.round((isNaN(mins) ? 0 : mins) * 60) }); }}
                                     className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-2 py-1.5 text-center text-xs text-zinc-100 outline-none" />
                                 </div>
                               </div>

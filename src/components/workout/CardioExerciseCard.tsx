@@ -3,6 +3,7 @@ import { Check, ChevronDown, ChevronUp, SkipForward, ArrowRightLeft, MessageSqua
 import { motion, AnimatePresence } from 'framer-motion';
 import type { WorkoutSessionExercise } from '@/db/types';
 import { Button } from '@/components/ui/Button';
+import { parseDecimalInput, DECIMAL_INPUT_PATTERN } from '@/lib/decimal';
 
 interface CardioExerciseCardProps {
   exercise: WorkoutSessionExercise;
@@ -145,27 +146,34 @@ export function CardioExerciseCard({
           <div className="flex-1">
             <label className="text-[10px] font-semibold uppercase text-zinc-600">Duration (min)</label>
             <input
-              type="number"
-              inputMode="numeric"
+              type="text"
+              inputMode="decimal"
+              pattern={DECIMAL_INPUT_PATTERN}
               placeholder="—"
               value={exercise.cardioDuration ?? ''}
-              onChange={(e) =>
-                handleFieldChange('cardioDuration', e.target.value ? Number(e.target.value) : undefined)
-              }
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === '') return handleFieldChange('cardioDuration', undefined);
+                const n = parseDecimalInput(raw);
+                handleFieldChange('cardioDuration', isNaN(n) ? undefined : n);
+              }}
               className="mt-1 w-full rounded-xl bg-zinc-800/50 px-3 py-2.5 text-sm font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-zinc-500 transition-all"
             />
           </div>
           <div className="flex-1">
             <label className="text-[10px] font-semibold uppercase text-zinc-600">Distance (km)</label>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.1"
+              pattern={DECIMAL_INPUT_PATTERN}
               placeholder="—"
               value={exercise.cardioDistance ?? ''}
-              onChange={(e) =>
-                handleFieldChange('cardioDistance', e.target.value ? Number(e.target.value) : undefined)
-              }
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === '') return handleFieldChange('cardioDistance', undefined);
+                const n = parseDecimalInput(raw);
+                handleFieldChange('cardioDistance', isNaN(n) ? undefined : n);
+              }}
               className="mt-1 w-full rounded-xl bg-zinc-800/50 px-3 py-2.5 text-sm font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-zinc-500 transition-all"
             />
           </div>
