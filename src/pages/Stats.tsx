@@ -4,7 +4,7 @@ import { Settings, Plus, X, Palmtree } from 'lucide-react';
 import { useSessions, useBodyweightEntries, useExercises, useTemplates, useStepEntries } from '@/hooks/useWorkout';
 import {
   extractRuns, weeklyDistances, paceSeries, runningRecords,
-  weekToDateRunning, aggregatePace, formatPace, getStrideMeters,
+  weekToDateRunning, aggregatePace, formatPace, getStrideMeters, getRunStrideMeters,
 } from '@/lib/running';
 import { useInsights } from '@/hooks/useInsights';
 import type { Severity } from '@/lib/insights';
@@ -213,11 +213,12 @@ export function Stats() {
     [runs, cutoffDate]
   );
   const strideM = getStrideMeters();
+  const runStrideM = getRunStrideMeters();
   const runningWeekly = useMemo(() => {
     const days = cutoffDate ? RANGE_DAYS[range as Exclude<StatsRange, 'all'>] : 182;
     const weeks = Math.max(4, Math.min(26, Math.ceil(days / 7)));
-    return weeklyDistances(runs, stepEntries, strideM, weeks);
-  }, [runs, stepEntries, strideM, cutoffDate, range]);
+    return weeklyDistances(runs, stepEntries, strideM, weeks, new Date(), runStrideM);
+  }, [runs, stepEntries, strideM, runStrideM, cutoffDate, range]);
   const paceData = useMemo(() => paceSeries(rangeRuns), [rangeRuns]);
   const runRecords = useMemo(() => runningRecords(runs), [runs]);
   const runWtd = useMemo(() => weekToDateRunning(runs), [runs]);
@@ -933,6 +934,9 @@ export function Stats() {
                 Steps-derived
               </div>
             </div>
+            <p className="mt-1 text-[10px] text-zinc-600">
+              Step distance on run days excludes estimated running steps.
+            </p>
           </Card>
 
           {/* Pace evolution */}

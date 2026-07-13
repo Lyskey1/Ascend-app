@@ -99,14 +99,33 @@ export interface WeekDistance {
   runs: number;
 }
 
+/**
+ * A day's step count with the estimated steps of that day's runs removed.
+ * Phone step counts already include steps taken while running, so the
+ * combined running+steps view would otherwise count runs twice. This is a
+ * display-level estimate only — stored step data is never touched.
+ */
+export function adjustedDaySteps(stepCount: number, runKmThatDay: number, runStrideMeters: number): number {
+  if (runKmThatDay <= 0) return stepCount;
+  const estimatedRunSteps = (runKmThatDay * 1000) / runStrideMeters;
+  return Math.max(0, stepCount - estimatedRunSteps);
+}
+
 /** Weekly running + steps-derived distance for the trailing `weekCount` weeks (oldest first) */
 export function weeklyDistances(
   runs: Run[],
   stepEntries: StepEntry[],
   strideMeters: number,
   weekCount: number,
-  now: Date = new Date()
+  now: Date = new Date(),
+  runStrideMeters: number = DEFAULT_RUN_STRIDE_M
 ): WeekDistance[] {
+  // Run km per calendar day, to deduct estimated run steps from that day
+  const runKmByDay = new Map<string, number>();
+  for (const r of runs) {
+    if (r.distanceKm > 0) runKmByDay.set(r.date, (runKmByDay.get(r.date) ?? 0) + r.distanceKm);
+  }
+
   const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 });
   const out: WeekDistance[] = [];
   for (let i = weekCount - 1; i >= 0; i--) {
@@ -115,7 +134,7 @@ export function weeklyDistances(
     const weekRuns = runsInRange(runs, weekStart, weekEnd);
     const steps = stepEntries
       .filter((e) => inRange(e.date + 'T12:00:00', weekStart, weekEnd))
-      .reduce((s, e) => s + e.stepCount, 0);
+      .reduce((s, e) => s + adjustedDaySteps(e.stepCount, runKmByDay.get(e.date) ?? 0, runStrideMeters), 0);
     out.push({
       weekStart,
       label: format(weekStart, 'MMM d'),
@@ -246,4 +265,18 @@ export function getStrideMeters(): number {
 
 export function setStrideMeters(m: number) {
   localStorage.setItem(LS_STRIDE_M, String(m));
+}
+
+// Running stride — used only to estimate how many of a run day's logged
+// steps belong to the run itself (registered in services/backup.ts).
+const LS_RUN_STRIDE_M = 'iron_run_stride_m';
+export const DEFAULT_RUN_STRIDE_M = 1.1; // running stride is longer than walking
+
+export function getRunStrideMeters(): number {
+  const v = parseFloat(localStorage.getItem(LS_RUN_STRIDE_M) ?? '');
+  return isFinite(v) && v > 0.5 && v < 2.5 ? v : DEFAULT_RUN_STRIDE_M;
+}
+
+export function setRunStrideMeters(m: number) {
+  localStorage.setItem(LS_RUN_STRIDE_M, String(m));
 }

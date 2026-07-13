@@ -34,6 +34,7 @@ const LS_KEYS = [
   'iron_bw_chart_mode',
   'iron_exercise_library_v',
   'iron_stride_m',
+  'iron_run_stride_m',
 ];
 
 // ─── Export ─────────────────────────────────────────────
