@@ -913,6 +913,10 @@ export function Stats() {
                       fontSize: '11px',
                     }}
                     formatter={(value, name) => [`${Number(value).toFixed(1)} km`, name === 'runKm' ? 'Running' : 'Steps']}
+                    labelFormatter={(label, payload) => {
+                      const runs = payload?.[0]?.payload?.runs;
+                      return `Week of ${label}${runs ? ` · ${runs} run${runs !== 1 ? 's' : ''}` : ''}`;
+                    }}
                   />
                   <Bar dataKey="runKm" stackId="d" fill="var(--color-accent)" fillOpacity={0.85} maxBarSize={20} name="runKm" />
                   <Bar dataKey="stepsKm" stackId="d" fill="var(--color-accent)" fillOpacity={0.3} radius={[4, 4, 0, 0]} maxBarSize={20} name="stepsKm" />

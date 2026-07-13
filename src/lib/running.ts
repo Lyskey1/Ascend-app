@@ -20,16 +20,20 @@ export interface Run {
   intensity?: string;
 }
 
-/** All runs (cardio exercises with a logged distance) from completed sessions, oldest first */
+/**
+ * All runs from completed sessions, oldest first. A cardio exercise with a
+ * logged distance OR duration counts as a run — duration-only runs carry
+ * distanceKm 0 so they appear in run counts but never in km or pace.
+ */
 export function extractRuns(sessions: WorkoutSession[]): Run[] {
   const runs: Run[] = [];
   for (const s of sessions) {
     if (s.status !== 'completed') continue;
     for (const ex of s.exercises) {
       if (ex.skipped || ex.exerciseType !== 'cardio') continue;
-      const distanceKm = ex.cardioDistance ?? 0;
-      if (distanceKm <= 0) continue;
+      const distanceKm = ex.cardioDistance && ex.cardioDistance > 0 ? ex.cardioDistance : 0;
       const durationMin = ex.cardioDuration && ex.cardioDuration > 0 ? ex.cardioDuration : null;
+      if (distanceKm <= 0 && durationMin == null) continue;
       runs.push({
         sessionId: s.id,
         templateName: s.templateName,
@@ -38,7 +42,7 @@ export function extractRuns(sessions: WorkoutSession[]): Run[] {
         date: format(new Date(s.startedAt), 'yyyy-MM-dd'),
         distanceKm,
         durationMin,
-        paceMinPerKm: durationMin ? durationMin / distanceKm : null,
+        paceMinPerKm: durationMin && distanceKm > 0 ? durationMin / distanceKm : null,
         intensity: ex.cardioIntensity,
       });
     }
@@ -59,12 +63,13 @@ export function stepsToKm(stepCount: number, strideMeters: number): number {
   return (stepCount * strideMeters) / 1000;
 }
 
-/** Aggregate pace (total time / total distance) over runs that have a duration */
+/** Aggregate pace (total time / total distance) over runs that have both */
 export function aggregatePace(runs: Run[]): number | null {
   let dist = 0;
   let mins = 0;
   for (const r of runs) {
-    if (r.durationMin == null) continue;
+    // duration-only runs (distanceKm 0) must not skew the aggregate
+    if (r.durationMin == null || r.distanceKm <= 0) continue;
     dist += r.distanceKm;
     mins += r.durationMin;
   }
@@ -196,7 +201,7 @@ export function runningRecords(runs: Run[]): RunningRecords {
   let totalKm = 0;
   for (const r of runs) {
     totalKm += r.distanceKm;
-    if (!longestRun || r.distanceKm > longestRun.distanceKm) longestRun = r;
+    if (r.distanceKm > 0 && (!longestRun || r.distanceKm > longestRun.distanceKm)) longestRun = r;
     if (
       r.paceMinPerKm != null &&
       r.distanceKm >= 1 &&
