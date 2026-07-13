@@ -3,17 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight as ChevronRightIcon, Trophy, Heart, Footprints,
   Moon, Scale, Dumbbell, TrendingUp, TrendingDown, Minus,
-  CheckCircle2, AlertTriangle, Target, Flame, Zap,
+  CheckCircle2, AlertTriangle, Target, Zap,
 } from 'lucide-react';
 import {
   format, startOfWeek, endOfWeek, addWeeks, subWeeks, endOfDay,
-  eachDayOfInterval, isAfter, isBefore, isSameDay,
+  isAfter, isBefore,
 } from 'date-fns';
 import { Card, CardTitle } from '@/components/ui/Card';
 import {
   useSessions, useBodyweightEntries, useStepEntries, useSleepEntries, useTemplates,
 } from '@/hooks/useWorkout';
-import { getRestDay } from '@/hooks/useScheduleSettings';
+import { extractRuns, aggregatePace, formatPace } from '@/lib/running';
+import { useInsights } from '@/hooks/useInsights';
+import { topTakeaways, buildCoachSummary, buildNextWeekFocus, domainSeverity, type Severity } from '@/lib/insights';
 import type { WorkoutSession, SleepEntry, StepEntry, BodyweightEntry } from '@/db/types';
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, Cell,
@@ -206,6 +208,8 @@ interface TrainingBreakdown {
   progressionSignal: 'up' | 'down' | 'stable';
   prevVolume: number;
   prevCount: number;
+  runKm: number;
+  runPaceMinPerKm: number | null;
 }
 
 interface SleepBreakdown {
@@ -295,6 +299,11 @@ function computeScores(data: WeekData): {
 
   const trainingScore = Math.round(adherenceScore * 0.5 + volumeTrendScore * 0.25 + countScore * 0.25);
 
+  // Running for the week (cardio = running)
+  const weekRuns = extractRuns(data.sessions);
+  const runKm = weekRuns.reduce((s, r) => s + r.distanceKm, 0);
+  const runPaceMinPerKm = aggregatePace(weekRuns);
+
   const trainingBreakdown: TrainingBreakdown = {
     strengthCount: strengthSessions.length,
     cardioCount: cardioSessions.length,
@@ -304,6 +313,8 @@ function computeScores(data: WeekData): {
     progressionSignal,
     prevVolume: Math.round(prevVolume),
     prevCount: data.prevWeekSessions.length,
+    runKm: Math.round(runKm * 10) / 10,
+    runPaceMinPerKm,
   };
 
   // ── Sleep ─────────────────────────────────────────
@@ -433,218 +444,29 @@ function computeScores(data: WeekData): {
 }
 
 // ═══════════════════════════════════════════════════════
-// Takeaways & Insights Generator
-// ═══════════════════════════════════════════════════════
-
-function generateTakeaways(
-  scores: Scores,
-  training: TrainingBreakdown,
-  sleep: SleepBreakdown,
-  steps: StepsBreakdown,
-  bw: BwBreakdown,
-): string[] {
-  const takeaways: string[] = [];
-
-  // Training
-  if (training.adherence >= 90) {
-    takeaways.push('Training consistency was excellent this week, with all planned sessions completed.');
-  } else if (training.adherence >= 70) {
-    takeaways.push('Training consistency was solid — most planned sessions were completed.');
-  } else if (training.strengthCount + training.cardioCount > 0) {
-    takeaways.push(`Training was lighter than planned this week, with ${training.strengthCount + training.cardioCount} session${training.strengthCount + training.cardioCount > 1 ? 's' : ''} completed.`);
-  } else if (training.strengthCount + training.cardioCount === 0) {
-    takeaways.push('No training sessions were logged this week.');
-  }
-
-  // Volume progression
-  if (training.prevVolume > 0 && training.totalVolume > 0) {
-    if (training.progressionSignal === 'up') {
-      takeaways.push(`Training volume increased compared to last week (${pctStr(training.totalVolume, training.prevVolume)}), suggesting good progression.`);
-    } else if (training.progressionSignal === 'down') {
-      takeaways.push(`Training volume dropped versus last week (${pctStr(training.totalVolume, training.prevVolume)}), which may reflect a lighter week or missed sessions.`);
-    }
-  }
-
-  // Sleep
-  if (sleep.entryCount > 0) {
-    if (sleep.avgScore >= 80) {
-      takeaways.push(`Sleep quality was strong this week with an average score of ${sleep.avgScore}.`);
-    } else if (sleep.avgScore >= 60) {
-      const consistency = sleep.bedtimeConsistency !== null && sleep.bedtimeConsistency > 45
-        ? ' Bedtime was inconsistent, which may have affected quality.'
-        : '';
-      takeaways.push(`Sleep quality was decent (avg ${sleep.avgScore}) but has room for improvement.${consistency}`);
-    } else {
-      takeaways.push(`Sleep quality was low this week (avg ${sleep.avgScore}), which likely impacted recovery and performance.`);
-    }
-  }
-
-  // Steps
-  if (steps.entryCount > 0) {
-    if (steps.prevAvgSteps > 0 && steps.avgSteps < steps.prevAvgSteps * 0.85) {
-      takeaways.push(`Daily movement dropped compared to last week (${fmtSteps(steps.avgSteps)} vs ${fmtSteps(steps.prevAvgSteps)} avg), which may have limited recovery.`);
-    } else if (steps.avgSteps >= 10000) {
-      takeaways.push(`Daily movement was excellent this week with an average of ${fmtSteps(steps.avgSteps)} steps.`);
-    } else if (steps.avgSteps >= 7000) {
-      takeaways.push(`Daily movement was solid, averaging ${fmtSteps(steps.avgSteps)} steps per day.`);
-    }
-  }
-
-  // Bodyweight
-  if (bw.weekAvg !== null && bw.prevWeekAvg !== null) {
-    const diff = Math.abs(bw.change ?? 0);
-    if (diff <= 0.3) {
-      takeaways.push('Bodyweight remained stable this week, suggesting a balanced energy intake.');
-    } else if ((bw.change ?? 0) > 0) {
-      takeaways.push(`Bodyweight increased slightly (+${diff}kg) compared to last week.`);
-    } else {
-      takeaways.push(`Bodyweight decreased slightly (-${diff}kg) compared to last week.`);
-    }
-  }
-
-  return takeaways.slice(0, 5);
-}
-
-function generateCoachSummary(
-  scores: Scores,
-  training: TrainingBreakdown,
-  sleep: SleepBreakdown,
-  steps: StepsBreakdown,
-  bw: BwBreakdown,
-): string {
-  const parts: string[] = [];
-
-  // Opening
-  if (scores.weekly >= 80) {
-    parts.push('You had a strong week overall.');
-  } else if (scores.weekly >= 60) {
-    parts.push('This was a solid week with room to tighten a few areas.');
-  } else if (scores.weekly >= 40) {
-    parts.push('This week was mixed.');
-  } else {
-    parts.push('This was a lighter week.');
-  }
-
-  // Training
-  if (training.adherence >= 80) {
-    parts.push('Training consistency was high');
-    if (training.progressionSignal === 'up') parts[parts.length - 1] += ' and volume progressed well.';
-    else parts[parts.length - 1] += '.';
-  } else if (training.strengthCount + training.cardioCount > 0) {
-    parts.push('Training output was below the usual level.');
-  } else {
-    parts.push('No training was logged.');
-  }
-
-  // Recovery
-  if (sleep.entryCount > 0) {
-    if (sleep.avgScore >= 75) {
-      parts.push('Sleep quality supported recovery well.');
-    } else if (sleep.avgScore >= 55) {
-      parts.push('Sleep was acceptable but could be optimized for better recovery.');
-    } else {
-      parts.push('Sleep quality was low, which likely limited recovery capacity.');
-    }
-  }
-
-  // Movement + BW synthesis
-  const movementNote = steps.entryCount > 0 && steps.avgSteps < 6000
-    ? 'Daily movement was on the lower side.'
-    : '';
-  const bwNote = bw.change !== null && Math.abs(bw.change) > 0.5
-    ? `Bodyweight shifted ${bw.change > 0 ? 'up' : 'down'} slightly.`
-    : '';
-
-  if (movementNote) parts.push(movementNote);
-  if (bwNote) parts.push(bwNote);
-
-  return parts.join(' ');
-}
-
-function generateWentWell(
-  scores: Scores,
-  training: TrainingBreakdown,
-  sleep: SleepBreakdown,
-  steps: StepsBreakdown,
-  bw: BwBreakdown,
-): string[] {
-  const items: string[] = [];
-  if (training.adherence >= 80) items.push('Strong training adherence');
-  if (training.progressionSignal === 'up') items.push('Volume progressed vs last week');
-  if (sleep.avgScore >= 75) items.push('Good sleep quality');
-  if (sleep.bedtimeConsistency !== null && sleep.bedtimeConsistency <= 30) items.push('Consistent bedtime');
-  if (steps.avgSteps >= 8000) items.push('Solid daily movement');
-  if (bw.weekAvg !== null && bw.change !== null && Math.abs(bw.change) <= 0.3) items.push('Stable bodyweight');
-  if (training.bestSession && training.bestSession.volume > 0) items.push(`Strong session: ${training.bestSession.name}`);
-  return items.length > 0 ? items.slice(0, 4) : ['Data is limited — log more consistently to unlock insights'];
-}
-
-function generateNeedsAttention(
-  scores: Scores,
-  training: TrainingBreakdown,
-  sleep: SleepBreakdown,
-  steps: StepsBreakdown,
-  bw: BwBreakdown,
-): string[] {
-  const items: string[] = [];
-  if (training.adherence < 70 && training.adherence > 0) items.push('Training consistency below target');
-  if (training.progressionSignal === 'down') items.push('Training volume declined');
-  if (sleep.avgScore > 0 && sleep.avgScore < 65) items.push('Sleep quality needs improvement');
-  if (sleep.bedtimeConsistency !== null && sleep.bedtimeConsistency > 45) items.push('Bedtime was inconsistent');
-  if (sleep.avgDuration > 0 && sleep.avgDuration < 420) items.push('Sleep duration below 7 hours');
-  if (steps.avgSteps > 0 && steps.avgSteps < 6000) items.push('Daily movement is low');
-  if (steps.prevAvgSteps > 0 && steps.avgSteps < steps.prevAvgSteps * 0.8) items.push('Steps dropped vs last week');
-  if (bw.entryCount === 0) items.push('No bodyweight logged this week');
-  return items.length > 0 ? items.slice(0, 4) : ['Nothing major — keep it up'];
-}
-
-function generateNextWeekFocus(
-  scores: Scores,
-  training: TrainingBreakdown,
-  sleep: SleepBreakdown,
-  steps: StepsBreakdown,
-  bw: BwBreakdown,
-): string[] {
-  const items: string[] = [];
-  if (training.adherence >= 80) {
-    items.push('Maintain your current training consistency');
-  } else {
-    items.push('Aim to complete all planned sessions');
-  }
-
-  if (sleep.avgScore > 0 && sleep.avgScore < 70) {
-    items.push('Prioritize sleep quality — try an earlier bedtime');
-  } else if (sleep.bedtimeConsistency !== null && sleep.bedtimeConsistency > 40) {
-    items.push('Stabilize your bedtime within a 30-minute window');
-  }
-
-  if (steps.avgSteps > 0 && steps.avgSteps < 7500) {
-    items.push('Raise daily steps closer to 8–10k on rest days');
-  }
-
-  if (bw.entryCount === 0) {
-    items.push('Log bodyweight at least 3 times this week');
-  }
-
-  return items.slice(0, 3);
-}
-
-// ═══════════════════════════════════════════════════════
 // Score Card Component
 // ═══════════════════════════════════════════════════════
 
-function ScoreCard({ label, score, sublabel, icon: Icon }: {
+const SEVERITY_BADGE: Record<Severity, string> = {
+  good: 'bg-positive/10 text-positive',
+  warning: 'bg-warning/10 text-warning',
+  info: 'bg-zinc-800 text-zinc-300',
+};
+
+function ScoreCard({ label, score, sublabel, icon: Icon, tone }: {
   label: string;
   score: number;
   sublabel: string;
   icon: React.ElementType;
+  /** rules-engine severity for the badge; falls back to the score band */
+  tone?: Severity | null;
 }) {
   return (
     <div className="card-surface p-4 text-center">
       <Icon className="h-5 w-5 mx-auto mb-2 text-zinc-500" strokeWidth={1.5} />
       <p className="text-[28px] leading-tight font-medium tabular-nums text-zinc-100">{score}</p>
       <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 mt-1">{label}</p>
-      <span className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${scoreBadgeClass(score)}`}>
+      <span className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${tone ? SEVERITY_BADGE[tone] : scoreBadgeClass(score)}`}>
         {sublabel}
       </span>
     </div>
@@ -692,11 +514,22 @@ export function WeeklyRecap() {
   const [weekOffset, setWeekOffset] = useState(0);
   const data = useWeekData(weekOffset);
   const { scores, training, sleep, steps, bw } = useMemo(() => computeScores(data), [data]);
-  const takeaways = useMemo(() => generateTakeaways(scores, training, sleep, steps, bw), [scores, training, sleep, steps, bw]);
-  const coachSummary = useMemo(() => generateCoachSummary(scores, training, sleep, steps, bw), [scores, training, sleep, steps, bw]);
-  const wentWell = useMemo(() => generateWentWell(scores, training, sleep, steps, bw), [scores, training, sleep, steps, bw]);
-  const needsAttention = useMemo(() => generateNeedsAttention(scores, training, sleep, steps, bw), [scores, training, sleep, steps, bw]);
-  const nextFocus = useMemo(() => generateNextWeekFocus(scores, training, sleep, steps, bw), [scores, training, sleep, steps, bw]);
+
+  // Rules engine, anchored to the selected week (past weeks evaluate
+  // as of their Sunday so historical recaps stay faithful)
+  const asOf = useMemo(
+    () => (weekOffset === 0 ? new Date() : endOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 })),
+    [weekOffset]
+  );
+  const findings = useInsights(asOf);
+  const takeaways = topTakeaways(findings, 3);
+  const coachSummary = buildCoachSummary(findings);
+  const wentWell = findings.filter((f) => f.severity === 'good').map((f) => f.headline).slice(0, 4);
+  const needsAttention = findings.filter((f) => f.severity === 'warning').map((f) => f.headline).slice(0, 4);
+  const nextFocus = buildNextWeekFocus(findings, 2);
+  const trainingTone = domainSeverity(findings, ['training', 'consistency']);
+  const recoveryTone = domainSeverity(findings, ['recovery']);
+  const weeklyTone = domainSeverity(findings, ['training', 'consistency', 'recovery', 'running']);
 
   const isCurrentWeek = weekOffset === 0;
   // Current week comparisons are clamped to week-to-date in useWeekData
@@ -759,32 +592,46 @@ export function WeeklyRecap() {
               score={scores.weekly}
               sublabel={scores.weeklyLabel}
               icon={Trophy}
+              tone={weeklyTone}
             />
             <ScoreCard
               label="Training"
               score={scores.training}
               sublabel={scores.trainingLabel}
               icon={Dumbbell}
+              tone={trainingTone}
             />
             <ScoreCard
               label="Recovery"
               score={scores.recovery}
               sublabel={scores.recoveryLabel}
               icon={Heart}
+              tone={recoveryTone}
             />
           </div>
 
-          {/* ── Main Takeaways ───────────────────────── */}
+          {/* ── Main Takeaways: top findings from the rules engine ── */}
           <Card>
             <CardTitle className="mb-3">Main Takeaways</CardTitle>
-            <div className="space-y-2.5">
-              {takeaways.map((t, i) => (
-                <div key={i} className="flex gap-2.5">
-                  <span className="mt-0.5 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-accent" />
-                  <p className="text-sm text-zinc-300 leading-relaxed">{t}</p>
-                </div>
-              ))}
-            </div>
+            {takeaways.length > 0 ? (
+              <div className="space-y-3">
+                {takeaways.map((f) => (
+                  <div key={f.id} className="flex gap-2.5">
+                    <span
+                      className={`mt-1.5 flex-shrink-0 h-1.5 w-1.5 rounded-full ${
+                        f.severity === 'good' ? 'bg-positive' : f.severity === 'warning' ? 'bg-warning' : 'bg-zinc-500'
+                      }`}
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-200 leading-snug">{f.headline}</p>
+                      <p className="text-xs text-zinc-500 leading-relaxed mt-0.5">{f.detail}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-500">Needs more data — keep logging workouts, sleep, and runs.</p>
+            )}
           </Card>
 
           {/* ── Coach Summary ────────────────────────── */}
@@ -813,7 +660,16 @@ export function WeeklyRecap() {
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-zinc-500">Cardio</p>
-                <p className="text-lg font-semibold tabular-nums text-zinc-100">{training.cardioCount} <span className="text-sm font-normal text-zinc-500">sessions</span></p>
+                <p className="text-lg font-semibold tabular-nums text-zinc-100">
+                  {training.runKm > 0 ? training.runKm : training.cardioCount}{' '}
+                  <span className="text-sm font-normal text-zinc-500">{training.runKm > 0 ? 'km' : 'sessions'}</span>
+                </p>
+                {training.runKm > 0 && (
+                  <p className="text-[10px] text-zinc-500">
+                    {training.cardioCount} session{training.cardioCount !== 1 ? 's' : ''}
+                    {training.runPaceMinPerKm != null && ` · ${formatPace(training.runPaceMinPerKm)} avg`}
+                  </p>
+                )}
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-zinc-500">Volume</p>
@@ -1033,9 +889,13 @@ export function WeeklyRecap() {
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-positive">Went Well</p>
               </div>
               <div className="space-y-1.5">
-                {wentWell.map((item, i) => (
-                  <p key={i} className="text-xs text-zinc-300 leading-snug">{item}</p>
-                ))}
+                {wentWell.length > 0 ? (
+                  wentWell.map((item, i) => (
+                    <p key={i} className="text-xs text-zinc-300 leading-snug">{item}</p>
+                  ))
+                ) : (
+                  <p className="text-xs text-zinc-600">Nothing stands out yet</p>
+                )}
               </div>
             </Card>
             <Card>
@@ -1044,9 +904,13 @@ export function WeeklyRecap() {
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-warning">Attention</p>
               </div>
               <div className="space-y-1.5">
-                {needsAttention.map((item, i) => (
-                  <p key={i} className="text-xs text-zinc-300 leading-snug">{item}</p>
-                ))}
+                {needsAttention.length > 0 ? (
+                  needsAttention.map((item, i) => (
+                    <p key={i} className="text-xs text-zinc-300 leading-snug">{item}</p>
+                  ))
+                ) : (
+                  <p className="text-xs text-zinc-600">Nothing major — keep it up</p>
+                )}
               </div>
             </Card>
           </div>

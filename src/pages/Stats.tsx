@@ -1,7 +1,13 @@
 import { useState, useMemo } from 'react';
-import { format, subDays, isAfter, eachDayOfInterval, eachWeekOfInterval } from 'date-fns';
+import { format, subDays, isAfter, startOfWeek, eachDayOfInterval, eachWeekOfInterval } from 'date-fns';
 import { Settings, Plus, X, Palmtree } from 'lucide-react';
-import { useSessions, useBodyweightEntries, useExercises, useTemplates } from '@/hooks/useWorkout';
+import { useSessions, useBodyweightEntries, useExercises, useTemplates, useStepEntries } from '@/hooks/useWorkout';
+import {
+  extractRuns, weeklyDistances, paceSeries, runningRecords,
+  weekToDateRunning, aggregatePace, formatPace, getStrideMeters,
+} from '@/lib/running';
+import { useInsights } from '@/hooks/useInsights';
+import type { Severity } from '@/lib/insights';
 import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { Card, CardTitle } from '@/components/ui/Card';
@@ -108,6 +114,9 @@ export function Stats() {
 
   const restDayNum = DAY_NAME_TO_NUM[restDay] ?? 0;
 
+  // ─── Coach findings (rules engine) ────────────────
+  const findings = useInsights();
+
   // ─── Cutoff date ─────────────────────────────────
   const cutoffDate = useMemo(() => {
     if (range === 'all') return null;
@@ -195,6 +204,27 @@ export function Stats() {
       count: w.sessions,
     }));
   }, [weeklyVolumeData]);
+
+  // ─── Running ───────────────────────────────────────
+  const stepEntries = useStepEntries();
+  const runs = useMemo(() => extractRuns(allSessions), [allSessions]);
+  const rangeRuns = useMemo(
+    () => (cutoffDate ? runs.filter((r) => isAfter(new Date(r.startedAt), cutoffDate)) : runs),
+    [runs, cutoffDate]
+  );
+  const strideM = getStrideMeters();
+  const runningWeekly = useMemo(() => {
+    const days = cutoffDate ? RANGE_DAYS[range as Exclude<StatsRange, 'all'>] : 182;
+    const weeks = Math.max(4, Math.min(26, Math.ceil(days / 7)));
+    return weeklyDistances(runs, stepEntries, strideM, weeks);
+  }, [runs, stepEntries, strideM, cutoffDate, range]);
+  const paceData = useMemo(() => paceSeries(rangeRuns), [rangeRuns]);
+  const runRecords = useMemo(() => runningRecords(runs), [runs]);
+  const runWtd = useMemo(() => weekToDateRunning(runs), [runs]);
+  const thisWeekPace = useMemo(() => {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    return aggregatePace(runs.filter((r) => new Date(r.startedAt) >= weekStart));
+  }, [runs]);
 
   // ─── Muscle balance composite scoring ──────────────
   //
@@ -665,6 +695,55 @@ export function Stats() {
         </div>
       </Sheet>
 
+      {/* ─── Coach ───────────────────────────────────── */}
+      {findings.length > 0 && (
+        <div>
+          <div className="mb-3">
+            <h2 className="text-sm font-semibold text-zinc-300">Coach</h2>
+            <p className="text-[11px] text-zinc-600">Deterministic findings from your training data</p>
+          </div>
+          <div className="space-y-2.5">
+            {findings.map((f) => {
+              const badge: Record<Severity, string> = {
+                good: 'bg-positive/10 text-positive',
+                warning: 'bg-warning/10 text-warning',
+                info: 'bg-zinc-800 text-zinc-400',
+              };
+              const badgeLabel: Record<Severity, string> = {
+                good: 'On track',
+                warning: 'Attention',
+                info: 'Info',
+              };
+              return (
+                <div key={f.id} className="card-surface p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-medium text-zinc-100 leading-snug">{f.headline}</p>
+                    <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${badge[f.severity]}`}>
+                      {badgeLabel[f.severity]}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">{f.detail}</p>
+                  {f.evidence.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      {f.evidence.map((e, i) => (
+                        <span key={i} className="rounded-full bg-zinc-900/80 px-2 py-0.5 text-[10px] tabular-nums text-zinc-400">
+                          {e}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {f.recommendation && (
+                    <p className="mt-2.5 border-t border-zinc-800/60 pt-2.5 text-xs leading-relaxed text-zinc-300">
+                      {f.recommendation}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Bodyweight evolution */}
       {bodyweightData.length > 2 && (
         <Card>
@@ -781,6 +860,157 @@ export function Stats() {
           </ResponsiveContainer>
         </div>
       </Card>
+
+      {/* ─── Running ─────────────────────────────────── */}
+      {runs.length > 0 && (
+        <>
+          {/* Compact stat row */}
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: 'This week', value: `${runWtd.currentKm.toFixed(1)}`, unit: 'km' },
+              { label: 'Avg pace', value: formatPace(thisWeekPace ?? aggregatePace(rangeRuns)).replace('/km', ''), unit: '/km' },
+              { label: 'Longest', value: runRecords.longestRun ? runRecords.longestRun.distanceKm.toFixed(1) : '—', unit: 'km' },
+              { label: 'All-time', value: runRecords.totalKm >= 100 ? Math.round(runRecords.totalKm).toString() : runRecords.totalKm.toFixed(1), unit: 'km' },
+            ].map(({ label, value, unit }) => (
+              <div key={label} className="card-surface px-2 py-2.5 text-center">
+                <p className="text-[9px] font-medium uppercase tracking-wide text-zinc-500">{label}</p>
+                <p className="mt-0.5 text-sm font-semibold tabular-nums text-zinc-100">
+                  {value}
+                  <span className="text-[10px] font-normal text-zinc-500">{unit}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Weekly distance: running + steps-derived */}
+          <Card>
+            <CardTitle className="mb-1">Weekly Distance</CardTitle>
+            <p className="text-[10px] text-zinc-500 mb-2">
+              Running + steps at {strideM} m/step
+            </p>
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={runningWeekly} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" strokeOpacity={0.6} vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v: number) => `${v}`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--color-zinc-900)',
+                      border: '1px solid var(--color-zinc-800)',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                    }}
+                    formatter={(value, name) => [`${Number(value).toFixed(1)} km`, name === 'runKm' ? 'Running' : 'Steps']}
+                  />
+                  <Bar dataKey="runKm" stackId="d" fill="var(--color-accent)" fillOpacity={0.85} maxBarSize={20} name="runKm" />
+                  <Bar dataKey="stepsKm" stackId="d" fill="var(--color-accent)" fillOpacity={0.3} radius={[4, 4, 0, 0]} maxBarSize={20} name="stepsKm" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-2 flex items-center gap-3 text-[10px] text-zinc-600">
+              <div className="flex items-center gap-1">
+                <div className="h-2.5 w-2.5 rounded-[2px] bg-accent/80" />
+                Running
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="h-2.5 w-2.5 rounded-[2px] bg-accent/30" />
+                Steps-derived
+              </div>
+            </div>
+          </Card>
+
+          {/* Pace evolution */}
+          {paceData.length > 1 && (
+            <Card>
+              <CardTitle className="mb-1">Pace Evolution</CardTitle>
+              <p className="text-[10px] text-zinc-500 mb-2">
+                min/km — axis inverted, higher = faster · line = 4-week average
+              </p>
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={paceData} margin={{ top: 4, right: 4, bottom: 0, left: -14 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" strokeOpacity={0.6} vertical={false} />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
+                      tickLine={false}
+                      axisLine={false}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      reversed
+                      domain={['dataMin - 0.25', 'dataMax + 0.25']}
+                      tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v: number) => formatPace(v).replace('/km', '')}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: 'var(--color-zinc-900)',
+                        border: '1px solid var(--color-zinc-800)',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                      }}
+                      formatter={(value, name) => [formatPace(Number(value)), name === 'ma4w' ? '4-week avg' : 'Run pace']}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="paceMinPerKm"
+                      stroke="var(--color-zinc-600)"
+                      strokeWidth={1}
+                      dot={{ r: 2.5, fill: 'var(--color-zinc-500)', strokeWidth: 0 }}
+                      name="paceMinPerKm"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="ma4w"
+                      stroke="var(--color-accent)"
+                      strokeWidth={2}
+                      dot={false}
+                      connectNulls
+                      name="ma4w"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          )}
+
+          {/* Monthly totals */}
+          {runRecords.perMonth.length > 0 && (
+            <Card>
+              <CardTitle className="mb-2">Monthly Running</CardTitle>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {runRecords.perMonth.slice(-8).map((m) => (
+                  <div key={m.month} className="flex-shrink-0 rounded-xl bg-zinc-900/60 px-3 py-2 text-center">
+                    <p className="text-[9px] uppercase tracking-wide text-zinc-500">{m.label}</p>
+                    <p className="text-sm font-semibold tabular-nums text-zinc-100">{m.km.toFixed(1)} <span className="text-[10px] font-normal text-zinc-500">km</span></p>
+                    <p className="text-[9px] text-zinc-600">{m.runs} run{m.runs !== 1 ? 's' : ''}</p>
+                  </div>
+                ))}
+              </div>
+              {runRecords.fastestRun && (
+                <p className="mt-2 text-[10px] text-zinc-500">
+                  Fastest: {formatPace(runRecords.fastestRun.paceMinPerKm)} ({runRecords.fastestRun.distanceKm.toFixed(1)} km, {format(new Date(runRecords.fastestRun.startedAt), 'MMM d, yyyy')})
+                </p>
+              )}
+            </Card>
+          )}
+        </>
+      )}
 
       {/* Muscle balance radar */}
       {radarData.length >= 3 && (

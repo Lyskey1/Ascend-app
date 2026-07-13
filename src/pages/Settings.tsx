@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, Download, Upload, Sun, Moon, Shield, CheckCircle2,
   AlertTriangle, Loader2, FileDown, FileUp, Database, HardDrive,
-  X,
+  X, Footprints,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/hooks/useTheme';
@@ -12,6 +12,7 @@ import {
   readFileAsJSON, type BackupFile, type ValidationResult,
 } from '@/services/backup';
 import { format } from 'date-fns';
+import { getStrideMeters, setStrideMeters } from '@/lib/running';
 
 // ─── Toast ──────────────────────────────────────────────
 
@@ -50,6 +51,14 @@ export function Settings() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Running stride (steps → distance)
+  const [stride, setStride] = useState(String(getStrideMeters()));
+  function handleStrideChange(value: string) {
+    setStride(value);
+    const n = parseFloat(value);
+    if (isFinite(n) && n >= 0.3 && n <= 1.5) setStrideMeters(n);
+  }
 
   // Export state
   const [exporting, setExporting] = useState(false);
@@ -193,6 +202,33 @@ export function Settings() {
             {theme === 'dark' ? 'Dark' : 'Light'}
           </div>
         </button>
+      </section>
+
+      {/* Running */}
+      <section>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">Running</h2>
+        <div className="card-surface flex items-center gap-4 px-4 py-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800">
+            <Footprints className="h-5 w-5 text-accent" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-zinc-100">Stride length</p>
+            <p className="text-xs text-zinc-500">Converts logged steps into distance</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min={0.3}
+              max={1.5}
+              value={stride}
+              onChange={(e) => handleStrideChange(e.target.value)}
+              className="w-16 rounded-xl border border-zinc-800 bg-zinc-900/50 px-2 py-2 text-center text-sm tabular-nums text-zinc-100 outline-none focus:border-zinc-600"
+            />
+            <span className="text-xs text-zinc-500">m/step</span>
+          </div>
+        </div>
       </section>
 
       {/* Data Management */}

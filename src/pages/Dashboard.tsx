@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, TrendingUp, TrendingDown, Flame, Calendar, ChevronRight, Dumbbell, Trash2, Zap, Target, BarChart3, ArrowUpRight, Activity, Trophy, Settings } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, Flame, Calendar, ChevronRight, Dumbbell, Trash2, Zap, Target, BarChart3, ArrowUpRight, Activity, Trophy, Settings, Footprints } from 'lucide-react';
 import { AscendLogo } from '@/components/brand/AscendLogo';
 import { format, subDays, addDays, isAfter, isBefore, startOfWeek, startOfDay } from 'date-fns';
 import { Card, CardTitle, CardValue } from '@/components/ui/Card';
@@ -23,6 +23,7 @@ import {
 } from '@/hooks/useWorkout';
 import { db } from '@/db/database';
 import { useTrashCount } from '@/hooks/useTrash';
+import { extractRuns, weekToDateRunning, aggregatePace, formatPace } from '@/lib/running';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -213,6 +214,15 @@ export function Dashboard() {
 
     return { improved, stalled, declined };
   }, [thisWeekSessions, sessions]);
+
+  // Running this week (week-to-date, like-for-like vs last week)
+  const runningWeek = useMemo(() => {
+    const runs = extractRuns(sessions);
+    const wtd = weekToDateRunning(runs);
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const pace = aggregatePace(runs.filter((r) => new Date(r.startedAt) >= weekStart));
+    return { ...wtd, pace };
+  }, [sessions]);
 
   // Consistency: consecutive training-day streak (rest days & vacation don't break it)
   const streak = useMemo(() => {
@@ -575,6 +585,30 @@ export function Dashboard() {
               </>
             )}
           </div>
+
+          {/* Card 5 — Running (only when a run is logged this week) */}
+          {runningWeek.currentRuns > 0 && (
+            <div className="card-surface col-span-2 flex items-center px-3.5 py-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Footprints className="h-3 w-3 text-zinc-500" />
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Running</span>
+                </div>
+                <p className="text-lg font-semibold tabular-nums text-zinc-100">
+                  {runningWeek.currentKm.toFixed(1)} km
+                  <span className="ml-1.5 text-xs font-medium text-zinc-500">
+                    {runningWeek.currentRuns} run{runningWeek.currentRuns !== 1 ? 's' : ''}
+                    {runningWeek.pace != null && ` · ${formatPace(runningWeek.pace)}`}
+                  </span>
+                </p>
+              </div>
+              {runningWeek.pctChange !== null && (
+                <p className={`text-[10px] font-medium tabular-nums ${runningWeek.pctChange >= 0 ? 'text-positive' : 'text-negative'}`}>
+                  {runningWeek.pctChange >= 0 ? '+' : ''}{runningWeek.pctChange.toFixed(0)}% vs last week (to {format(new Date(), 'EEE')})
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Summary sentence */}
