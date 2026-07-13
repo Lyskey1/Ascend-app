@@ -194,7 +194,7 @@ function HistoryRow({
   return (
     <div className="relative overflow-hidden rounded-xl">
       {/* Delete button revealed behind on swipe */}
-      <div className="absolute inset-y-0 right-0 flex w-20 items-center justify-center bg-red-500/90">
+      <div className="absolute inset-y-0 right-0 flex w-20 items-center justify-center bg-negative/90">
         <button onClick={onDelete} className="flex flex-col items-center gap-0.5 p-2">
           <Trash2 className="h-4 w-4 text-white" />
           <span className="text-[10px] font-medium text-white">Delete</span>
@@ -228,9 +228,9 @@ function TargetDot(props: {
 
   let fill = 'var(--color-zinc-100)';
   if (targetRange) {
-    if (payload.weight > targetRange.max) fill = '#f87171';
-    else if (payload.weight < targetRange.min) fill = '#60a5fa';
-    else fill = '#34d399';
+    if (payload.weight > targetRange.max) fill = 'var(--color-negative)';
+    else if (payload.weight < targetRange.min) fill = 'var(--color-accent)';
+    else fill = 'var(--color-positive)';
   }
 
   return <circle cx={cx} cy={cy} r={3.5} fill={fill} stroke="none" />;
@@ -595,10 +595,10 @@ export function BodyweightPage() {
             {targetRange && latest && (
               <p className={`mt-1 text-xs font-medium ${
                 latest.weight > targetRange.max
-                  ? 'text-red-400'
+                  ? 'text-negative'
                   : latest.weight < targetRange.min
-                    ? 'text-blue-400'
-                    : 'text-emerald-400'
+                    ? 'text-accent'
+                    : 'text-positive'
               }`}>
                 {latest.weight > targetRange.max
                   ? `+${(latest.weight - targetRange.max).toFixed(1)} above target`
@@ -611,7 +611,7 @@ export function BodyweightPage() {
           {stats && stats.count >= 2 && (
             <div className="text-right">
               <div className={`flex items-center gap-1 text-sm font-medium ${
-                stats.change <= 0 ? 'text-emerald-400' : 'text-amber-400'
+                stats.change <= 0 ? 'text-positive' : 'text-warning'
               }`}>
                 {stats.change <= 0 ? <TrendingDown className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
                 {stats.change > 0 ? '+' : ''}{stats.change.toFixed(1)} kg
@@ -656,7 +656,7 @@ export function BodyweightPage() {
           }}
           className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium ${
             targetRange
-              ? 'bg-emerald-500/10 text-emerald-400'
+              ? 'bg-positive/10 text-positive'
               : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200 active:text-zinc-200'
           }`}
         >
@@ -671,17 +671,17 @@ export function BodyweightPage() {
           <div className="h-56 sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartDataWithMA} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" strokeOpacity={0.6} vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 10, fill: 'var(--color-zinc-500)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                   tickLine={false}
                   axisLine={false}
                   interval="preserveStartEnd"
                 />
                 <YAxis
                   domain={yDomain}
-                  tick={{ fontSize: 10, fill: 'var(--color-zinc-500)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                   tickLine={false}
                   axisLine={false}
                   tickCount={5}
@@ -699,9 +699,9 @@ export function BodyweightPage() {
                   <ReferenceArea
                     y1={targetRange.min}
                     y2={targetRange.max}
-                    fill="#34d399"
+                    fill="var(--color-positive)"
                     fillOpacity={0.06}
-                    stroke="#34d399"
+                    stroke="var(--color-positive)"
                     strokeOpacity={0.2}
                     strokeDasharray="4 4"
                   />
@@ -710,17 +710,17 @@ export function BodyweightPage() {
                   <>
                     <ReferenceLine
                       y={targetRange.min}
-                      stroke="#34d399"
+                      stroke="var(--color-positive)"
                       strokeOpacity={0.3}
                       strokeDasharray="4 4"
-                      label={{ value: `${targetRange.min}`, position: 'left', fill: '#34d399', fontSize: 9 }}
+                      label={{ value: `${targetRange.min}`, position: 'left', fill: 'var(--color-positive)', fontSize: 9 }}
                     />
                     <ReferenceLine
                       y={targetRange.max}
-                      stroke="#34d399"
+                      stroke="var(--color-positive)"
                       strokeOpacity={0.3}
                       strokeDasharray="4 4"
-                      label={{ value: `${targetRange.max}`, position: 'left', fill: '#34d399', fontSize: 9 }}
+                      label={{ value: `${targetRange.max}`, position: 'left', fill: 'var(--color-positive)', fontSize: 9 }}
                     />
                   </>
                 )}
@@ -760,22 +760,22 @@ export function BodyweightPage() {
                   <Line
                     type="monotone"
                     dataKey="ma"
-                    stroke="#a78bfa"
+                    stroke="var(--color-accent)"
                     strokeWidth={chartMode === 'ma' ? 2 : 1.5}
                     strokeDasharray={chartMode === 'ma' ? undefined : '4 4'}
                     dot={chartMode === 'ma'
                       ? (targetRange
                           ? (props: Record<string, unknown>) => {
                               const payload = props.payload as { ma: number };
-                              let fill = '#a78bfa';
+                              let fill = 'var(--color-accent)';
                               if (targetRange) {
-                                if (payload.ma > targetRange.max) fill = '#f87171';
-                                else if (payload.ma < targetRange.min) fill = '#60a5fa';
-                                else fill = '#34d399';
+                                if (payload.ma > targetRange.max) fill = 'var(--color-negative)';
+                                else if (payload.ma < targetRange.min) fill = 'var(--color-accent)';
+                                else fill = 'var(--color-positive)';
                               }
                               return <circle key={`ma-${props.index}`} cx={props.cx as number} cy={props.cy as number} r={3} fill={fill} stroke="none" />;
                             }
-                          : { r: 2.5, fill: '#a78bfa', strokeWidth: 0 })
+                          : { r: 2.5, fill: 'var(--color-accent)', strokeWidth: 0 })
                       : false
                     }
                     name="7-day MA"
@@ -805,7 +805,7 @@ export function BodyweightPage() {
           <Card className="px-3 py-2.5">
             <CardTitle className="text-[10px]">Change</CardTitle>
             <p className={`mt-0.5 text-base font-bold ${
-              stats.change <= 0 ? 'text-emerald-400' : 'text-amber-400'
+              stats.change <= 0 ? 'text-positive' : 'text-warning'
             }`}>
               {stats.change > 0 ? '+' : ''}{stats.change.toFixed(1)}
             </p>
@@ -856,9 +856,9 @@ export function BodyweightPage() {
                     {entry.diff !== null && (
                       <p className={`text-[11px] font-medium ${
                         entry.diff < 0
-                          ? 'text-emerald-500/70'
+                          ? 'text-positive/70'
                           : entry.diff > 0
-                            ? 'text-amber-500/70'
+                            ? 'text-warning/70'
                             : 'text-zinc-600'
                       }`}>
                         {entry.diff > 0 ? '+' : ''}{entry.diff.toFixed(1)} kg
@@ -1141,7 +1141,7 @@ export function BodyweightPage() {
                       )}
                       <button
                         onClick={() => setShowDeleteTagConfirm(tc.id)}
-                        className="rounded-full p-1.5 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 active:text-red-400 transition-colors flex-shrink-0"
+                        className="rounded-full p-1.5 text-zinc-600 hover:text-negative hover:bg-negative/10 active:text-negative transition-colors flex-shrink-0"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

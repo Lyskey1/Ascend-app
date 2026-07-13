@@ -1100,7 +1100,7 @@ export function Programs() {
                           <button onClick={() => { const g = groupLayout.groups.find((g) => g.id === item.groupId); setEditingGroupId(item.groupId); setEditGroupName(item.name); setEditGroupEmoji(g?.emoji ?? ''); }}
                             className="p-1 text-zinc-700 active:text-zinc-400 transition-colors"><Pencil className="h-3 w-3" /></button>
                           <button onClick={() => handleDeleteGroup(item.groupId)}
-                            className="p-1 text-zinc-700 active:text-red-400 transition-colors"><Trash2 className="h-3 w-3" /></button>
+                            className="p-1 text-zinc-700 active:text-negative transition-colors"><Trash2 className="h-3 w-3" /></button>
                         </div>
                       )}
                     </div>
@@ -1277,7 +1277,7 @@ export function Programs() {
                             </button>
                             {ex && <MuscleChips exercise={ex} />}
                           </div>
-                          <button onClick={() => handleRemoveExercise(idx)} className="rounded p-1.5 text-zinc-600 hover:text-red-400 active:text-red-400 transition-colors flex-shrink-0">
+                          <button onClick={() => handleRemoveExercise(idx)} className="rounded p-1.5 text-zinc-600 hover:text-negative active:text-negative transition-colors flex-shrink-0">
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
@@ -1536,7 +1536,7 @@ export function Programs() {
                     {editingExercise.mediaType === 'video' ? <video src={editingExercise.mediaUrl} muted className="h-full w-full object-cover" /> : <img src={editingExercise.mediaUrl} alt="" className="h-full w-full object-cover" />}
                   </div>
                   <button type="button" onClick={async () => { await updateExercise(editingExercise.id, { mediaUrl: undefined, mediaType: undefined }); setEditingExercise({ ...editingExercise, mediaUrl: undefined, mediaType: undefined }); }}
-                    className="text-xs text-zinc-500 active:text-red-400 transition-colors">Remove media</button>
+                    className="text-xs text-zinc-500 active:text-negative transition-colors">Remove media</button>
                 </div>
               ) : (
                 <button type="button" onClick={() => { setMediaUploadTargetId(editingExercise.id); exerciseMediaInputRef.current?.click(); }}

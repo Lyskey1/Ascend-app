@@ -8,10 +8,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
-  primary: 'bg-white text-zinc-900 font-semibold active:bg-zinc-200 shadow-lg shadow-white/10',
-  secondary: 'bg-zinc-800 text-zinc-100 font-medium active:bg-zinc-700 border border-zinc-700',
+  primary: 'bg-white text-zinc-950 font-semibold active:bg-zinc-200 shadow-lg shadow-white/10',
+  secondary: 'bg-zinc-900 text-zinc-100 font-medium active:bg-zinc-800 border border-zinc-800',
   ghost: 'text-zinc-400 font-medium active:text-zinc-200 active:bg-zinc-800/50',
-  danger: 'bg-red-500/15 text-red-400 font-medium active:bg-red-500/25',
+  danger: 'bg-negative/10 text-negative font-medium active:bg-negative/20',
 };
 
 const sizes = {

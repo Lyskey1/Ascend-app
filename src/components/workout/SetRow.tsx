@@ -114,22 +114,22 @@ export function SetRow({ set, prevSet, comparison, isTimeBased, onChange, onComp
         {showTimeIndicators && (
           <div className="flex items-center gap-2 mt-1.5 ml-6 flex-wrap">
             {comparison.weight === 'up' && (
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+              <span className="rounded-full bg-positive/10 px-2 py-0.5 text-[10px] font-semibold text-positive">
                 +{comparison.weightDiff}kg
               </span>
             )}
             {comparison.weight === 'down' && (
-              <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-400">
+              <span className="rounded-full bg-negative/10 px-2 py-0.5 text-[10px] font-semibold text-negative">
                 {comparison.weightDiff}kg
               </span>
             )}
             {comparison.duration === 'up' && comparison.durationDiff != null && (
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+              <span className="rounded-full bg-positive/10 px-2 py-0.5 text-[10px] font-semibold text-positive">
                 {formatDurationDiff(comparison.durationDiff)}
               </span>
             )}
             {comparison.duration === 'down' && comparison.durationDiff != null && (
-              <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-400">
+              <span className="rounded-full bg-negative/10 px-2 py-0.5 text-[10px] font-semibold text-negative">
                 {formatDurationDiff(comparison.durationDiff)}
               </span>
             )}
@@ -208,24 +208,24 @@ export function SetRow({ set, prevSet, comparison, isTimeBased, onChange, onComp
         <div className="flex items-center gap-2 mt-1.5 ml-6 flex-wrap">
           {/* Weight progression */}
           {comparison.weight === 'up' && (
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+            <span className="rounded-full bg-positive/10 px-2 py-0.5 text-[10px] font-semibold text-positive">
               +{comparison.weightDiff}kg
             </span>
           )}
           {comparison.weight === 'down' && (
-            <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-400">
+            <span className="rounded-full bg-negative/10 px-2 py-0.5 text-[10px] font-semibold text-negative">
               {comparison.weightDiff}kg
             </span>
           )}
 
           {/* Reps progression — only shown when same weight */}
           {comparison.reps === 'up' && (
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+            <span className="rounded-full bg-positive/10 px-2 py-0.5 text-[10px] font-semibold text-positive">
               +{comparison.repsDiff} rep{comparison.repsDiff !== 1 ? 's' : ''}
             </span>
           )}
           {comparison.reps === 'down' && (
-            <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-400">
+            <span className="rounded-full bg-negative/10 px-2 py-0.5 text-[10px] font-semibold text-negative">
               {comparison.repsDiff} rep{comparison.repsDiff !== -1 ? 's' : ''}
             </span>
           )}

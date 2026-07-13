@@ -62,20 +62,20 @@ function avgArr(arr: number[]): number {
 
 // Score → text color (for cards and labels)
 function scoreColor(score: number): string {
-  if (score >= 90) return 'text-emerald-500';
-  if (score >= 85) return 'text-emerald-400';
-  if (score >= 80) return 'text-blue-400';
-  if (score >= 60) return 'text-red-400';
-  return 'text-red-500';
+  if (score >= 90) return 'text-positive';
+  if (score >= 85) return 'text-positive';
+  if (score >= 80) return 'text-accent';
+  if (score >= 60) return 'text-negative';
+  return 'text-negative';
 }
 
 // Score → chart fill color
 function scoreChartColor(score: number): string {
-  if (score >= 90) return '#15803d'; // dark green
-  if (score >= 85) return '#22c55e'; // green
-  if (score >= 80) return '#3b82f6'; // blue
-  if (score >= 60) return '#ef4444'; // red
-  return '#dc2626';                   // darker red
+  if (score >= 90) return 'var(--color-positive-strong)';
+  if (score >= 85) return 'var(--color-positive)';
+  if (score >= 80) return 'var(--color-accent)';
+  if (score >= 60) return 'var(--color-warning)';
+  return 'var(--color-negative)';
 }
 
 // Score → dot stroke for line chart
@@ -84,10 +84,10 @@ function scoreDotColor(score: number): string {
 }
 
 function scoreBg(score: number): string {
-  if (score >= 85) return 'bg-emerald-500/10';
-  if (score >= 80) return 'bg-blue-500/10';
-  if (score >= 60) return 'bg-red-500/10';
-  return 'bg-red-500/15';
+  if (score >= 85) return 'bg-positive/10';
+  if (score >= 80) return 'bg-accent/10';
+  if (score >= 60) return 'bg-negative/10';
+  return 'bg-negative/15';
 }
 
 function scoreLabel(score: number): string {
@@ -404,12 +404,12 @@ export function SleepPage() {
           <CardTitle>Avg Score</CardTitle>
           <CardValue className={scoreColor(stats.avgScore)}>{stats.avgScore}</CardValue>
           <div className="mt-1 flex items-center gap-1 text-xs">
-            {stats.scoreTrend === 'up' && <TrendingUp className="h-3 w-3 text-emerald-400" />}
-            {stats.scoreTrend === 'down' && <TrendingDown className="h-3 w-3 text-red-400" />}
+            {stats.scoreTrend === 'up' && <TrendingUp className="h-3 w-3 text-positive" />}
+            {stats.scoreTrend === 'down' && <TrendingDown className="h-3 w-3 text-negative" />}
             {stats.scoreTrend === 'stable' && <Minus className="h-3 w-3 text-zinc-400" />}
             <span className={
-              stats.scoreTrend === 'up' ? 'text-emerald-400' :
-              stats.scoreTrend === 'down' ? 'text-red-400' : 'text-zinc-500'
+              stats.scoreTrend === 'up' ? 'text-positive' :
+              stats.scoreTrend === 'down' ? 'text-negative' : 'text-zinc-500'
             }>
               {stats.scoreTrend === 'up' ? 'Improving' : stats.scoreTrend === 'down' ? 'Declining' : 'Stable'}
             </span>
@@ -425,7 +425,7 @@ export function SleepPage() {
             <CardTitle>Avg Bedtime</CardTitle>
             <CardValue className="text-xl">{minutesToTimeStr(stats.avgBedtime)}</CardValue>
             {stats.bedtimeConsistency !== null && (
-              <p className={`text-xs mt-1 ${stats.bedtimeConsistency <= 30 ? 'text-emerald-400' : stats.bedtimeConsistency <= 60 ? 'text-amber-400' : 'text-red-400'}`}>
+              <p className={`text-xs mt-1 ${stats.bedtimeConsistency <= 30 ? 'text-positive' : stats.bedtimeConsistency <= 60 ? 'text-warning' : 'text-negative'}`}>
                 &plusmn;{stats.bedtimeConsistency}min variance
               </p>
             )}
@@ -433,7 +433,7 @@ export function SleepPage() {
         )}
         <Card>
           <CardTitle>Best Night</CardTitle>
-          <CardValue className="text-emerald-400">{stats.bestScore}</CardValue>
+          <CardValue className="text-positive">{stats.bestScore}</CardValue>
           {stats.bestEntry && (
             <p className="text-xs text-zinc-500 mt-1">
               {format(new Date(stats.bestEntry.date), 'MMM d')} &middot; {durationStr(stats.bestEntry.sleepDuration)}
@@ -450,7 +450,7 @@ export function SleepPage() {
             onClick={() => setRange(r)}
             className={`rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
               range === r
-                ? 'bg-blue-500 text-white'
+                ? 'bg-accent text-white'
                 : 'bg-zinc-800/60 text-zinc-400 active:bg-zinc-700'
             }`}
           >
@@ -466,11 +466,11 @@ export function SleepPage() {
           {/* Legend */}
           <div className="flex flex-wrap gap-x-3 gap-y-1 mb-3">
             {[
-              { color: '#dc2626', label: '< 60' },
-              { color: '#ef4444', label: '60–79' },
-              { color: '#3b82f6', label: '80–84' },
-              { color: '#22c55e', label: '85–89' },
-              { color: '#15803d', label: '90+' },
+              { color: 'var(--color-negative)', label: '< 60' },
+              { color: 'var(--color-warning)', label: '60–79' },
+              { color: 'var(--color-accent)', label: '80–84' },
+              { color: 'var(--color-positive)', label: '85–89' },
+              { color: 'var(--color-positive-strong)', label: '90+' },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-1">
                 <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
@@ -481,17 +481,17 @@ export function SleepPage() {
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={scoreTrendData} margin={{ top: 5, right: 5, bottom: 0, left: -15 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" strokeOpacity={0.6} vertical={false} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 10, fill: 'var(--color-zinc-500)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                   tickLine={false}
                   axisLine={false}
                   interval={range === '7d' ? 0 : 'equidistantPreserveStart'}
                 />
                 <YAxis
                   domain={[0, 100]}
-                  tick={{ fontSize: 10, fill: 'var(--color-zinc-500)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -527,16 +527,16 @@ export function SleepPage() {
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={durationChartData} margin={{ top: 5, right: 5, bottom: 0, left: -15 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" strokeOpacity={0.6} vertical={false} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 10, fill: 'var(--color-zinc-500)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                   tickLine={false}
                   axisLine={false}
                   interval={range === '7d' ? 0 : 'equidistantPreserveStart'}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: 'var(--color-zinc-500)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(v) => `${v}h`}
@@ -578,17 +578,17 @@ export function SleepPage() {
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={bedtimeData} margin={{ top: 5, right: 5, bottom: 0, left: -5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" strokeOpacity={0.6} vertical={false} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 10, fill: 'var(--color-zinc-500)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                   tickLine={false}
                   axisLine={false}
                   interval={range === '7d' ? 0 : 'equidistantPreserveStart'}
                 />
                 <YAxis
                   reversed
-                  tick={{ fontSize: 10, fill: 'var(--color-zinc-500)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(v) => minutesToTimeStr(v)}
@@ -609,10 +609,10 @@ export function SleepPage() {
                 <Line
                   dataKey="bedtime"
                   type="monotone"
-                  stroke="#f59e0b"
+                  stroke="var(--color-warning)"
                   strokeWidth={2}
-                  dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: '#fbbf24' }}
+                  dot={{ r: 3, fill: 'var(--color-warning)', strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: 'var(--color-warning)' }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -627,7 +627,7 @@ export function SleepPage() {
           <CardValue className={`text-xl ${scoreColor(stats.thisWeekAvgScore)}`}>{stats.thisWeekAvgScore}</CardValue>
           {stats.lastWeekAvgScore > 0 && (
             <p className={`text-xs mt-1 ${
-              stats.thisWeekAvgScore >= stats.lastWeekAvgScore ? 'text-emerald-400' : 'text-red-400'
+              stats.thisWeekAvgScore >= stats.lastWeekAvgScore ? 'text-positive' : 'text-negative'
             }`}>
               {pctChange(stats.thisWeekAvgScore, stats.lastWeekAvgScore)} vs last week
             </p>
@@ -638,7 +638,7 @@ export function SleepPage() {
           <CardValue className="text-xl">{durationStr(stats.thisWeekAvgDuration)}</CardValue>
           {stats.lastWeekAvgDuration > 0 && (
             <p className={`text-xs mt-1 ${
-              stats.thisWeekAvgDuration >= stats.lastWeekAvgDuration ? 'text-emerald-400' : 'text-red-400'
+              stats.thisWeekAvgDuration >= stats.lastWeekAvgDuration ? 'text-positive' : 'text-negative'
             }`}>
               {pctChange(stats.thisWeekAvgDuration, stats.lastWeekAvgDuration)} vs last week
             </p>
@@ -691,7 +691,7 @@ export function SleepPage() {
                   </button>
                   <button
                     onClick={() => handleDelete(entry.date)}
-                    className="p-1.5 text-zinc-500 active:text-red-400"
+                    className="p-1.5 text-zinc-500 active:text-negative"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -711,7 +711,7 @@ export function SleepPage() {
               type="date"
               value={formDate}
               onChange={(e) => setFormDate(e.target.value)}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-blue-500 transition-colors"
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-accent transition-colors"
             />
           </div>
 
@@ -725,7 +725,7 @@ export function SleepPage() {
               placeholder="e.g. 78"
               value={formScore}
               onChange={(e) => setFormScore(e.target.value)}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-blue-500 transition-colors"
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-accent transition-colors"
             />
           </div>
 
@@ -741,7 +741,7 @@ export function SleepPage() {
                   placeholder="Hours"
                   value={formHours}
                   onChange={(e) => setFormHours(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-blue-500 transition-colors"
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-accent transition-colors"
                 />
               </div>
               <div className="flex-1">
@@ -753,7 +753,7 @@ export function SleepPage() {
                   placeholder="Minutes"
                   value={formMinutes}
                   onChange={(e) => setFormMinutes(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-blue-500 transition-colors"
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-accent transition-colors"
                 />
               </div>
             </div>
@@ -769,7 +769,7 @@ export function SleepPage() {
                   type="time"
                   value={formBedtime}
                   onChange={(e) => setFormBedtime(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-zinc-100 text-sm outline-none focus:border-blue-500 transition-colors"
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-zinc-100 text-sm outline-none focus:border-accent transition-colors"
                 />
                 {derivedWakeUp && (
                   <p className="text-xs text-zinc-500 mt-1.5">
@@ -788,7 +788,7 @@ export function SleepPage() {
                   placeholder="0"
                   value={formInterruptions}
                   onChange={(e) => setFormInterruptions(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-zinc-100 text-sm outline-none focus:border-blue-500 transition-colors"
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-zinc-100 text-sm outline-none focus:border-accent transition-colors"
                 />
               </div>
 
@@ -799,7 +799,7 @@ export function SleepPage() {
                   placeholder="e.g. Late coffee, stressful day..."
                   value={formNote}
                   onChange={(e) => setFormNote(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-zinc-100 text-sm outline-none focus:border-blue-500 transition-colors"
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-zinc-100 text-sm outline-none focus:border-accent transition-colors"
                 />
               </div>
             </div>

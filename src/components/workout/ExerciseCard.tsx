@@ -191,7 +191,7 @@ export function ExerciseCard({
                   <p className="text-xs text-zinc-400">{templateNotes}</p>
                 )}
                 {machineSetup && (
-                  <p className="text-xs text-blue-400/80">Setup: {machineSetup}</p>
+                  <p className="text-xs text-accent/80">Setup: {machineSetup}</p>
                 )}
               </div>
             </motion.div>
@@ -248,19 +248,19 @@ export function ExerciseCard({
 
       {/* ── Warm-up sets section ────────────────────── */}
       {warmupState === 'logging' && (
-        <div className="mx-3 mb-2 rounded-xl border border-amber-500/10 bg-amber-500/5 overflow-hidden">
+        <div className="mx-3 mb-2 rounded-xl border border-warning/10 bg-warning/5 overflow-hidden">
           <div className="flex items-center justify-between px-3 pt-2 pb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-500/70">Warm-up</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-warning/70">Warm-up</span>
           </div>
           <div className="space-y-1 px-2 pb-1.5">
             {exercise.warmupSets!.map((ws, i) => (
               <div key={ws.id} className="flex items-center gap-2 rounded-lg bg-zinc-900/40 px-2 py-1.5">
-                <span className="w-7 text-center text-[10px] font-bold text-amber-500/60">W{i + 1}</span>
+                <span className="w-7 text-center text-[10px] font-bold text-warning/60">W{i + 1}</span>
                 <DecimalInput
                   placeholder="kg"
                   value={ws.weight}
                   onChange={(n) => handleWarmupSetChange(i, { weight: n })}
-                  className="w-16 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-amber-500/40 transition-all"
+                  className="w-16 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-warning/40 transition-all"
                 />
                 <input
                   type="text"
@@ -272,7 +272,7 @@ export function ExerciseCard({
                     const raw = e.target.value.replace(/[^0-9]/g, '');
                     handleWarmupSetChange(i, { reps: raw === '' ? null : Number(raw) });
                   }}
-                  className="w-14 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-amber-500/40 transition-all"
+                  className="w-14 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-warning/40 transition-all"
                 />
                 <button
                   onClick={() => handleRemoveWarmupSet(i)}
@@ -285,7 +285,7 @@ export function ExerciseCard({
           </div>
           <button
             onClick={handleAddWarmupSet}
-            className="flex w-full items-center justify-center gap-1 border-t border-amber-500/10 py-1.5 text-[10px] font-medium text-amber-500/60 active:text-amber-400 transition-colors"
+            className="flex w-full items-center justify-center gap-1 border-t border-warning/10 py-1.5 text-[10px] font-medium text-warning/60 active:text-warning transition-colors"
           >
             <Plus className="h-3 w-3" />
             Add set

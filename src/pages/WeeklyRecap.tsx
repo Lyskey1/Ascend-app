@@ -6,7 +6,7 @@ import {
   CheckCircle2, AlertTriangle, Target, Flame, Zap,
 } from 'lucide-react';
 import {
-  format, startOfWeek, endOfWeek, addWeeks, subWeeks,
+  format, startOfWeek, endOfWeek, addWeeks, subWeeks, endOfDay,
   eachDayOfInterval, isAfter, isBefore, isSameDay,
 } from 'date-fns';
 import { Card, CardTitle } from '@/components/ui/Card';
@@ -60,28 +60,14 @@ function scoreLabel(score: number): string {
   return 'Off-track';
 }
 
-function scoreColor(score: number): string {
-  if (score >= 85) return 'text-emerald-400';
-  if (score >= 70) return 'text-blue-400';
-  if (score >= 55) return 'text-zinc-200';
-  if (score >= 40) return 'text-amber-400';
-  return 'text-red-400';
-}
-
-function scoreBorder(score: number): string {
-  if (score >= 85) return 'border-emerald-500/30';
-  if (score >= 70) return 'border-blue-500/30';
-  if (score >= 55) return 'border-zinc-600/30';
-  if (score >= 40) return 'border-amber-500/30';
-  return 'border-red-500/30';
-}
-
-function scoreBg(score: number): string {
-  if (score >= 85) return 'bg-emerald-500/8';
-  if (score >= 70) return 'bg-blue-500/8';
-  if (score >= 55) return 'bg-zinc-500/8';
-  if (score >= 40) return 'bg-amber-500/8';
-  return 'bg-red-500/8';
+/* Status badge tone per score band — cards stay neutral,
+   color lives only in the small badge */
+function scoreBadgeClass(score: number): string {
+  if (score >= 85) return 'bg-positive/10 text-positive';
+  if (score >= 70) return 'bg-accent/10 text-accent';
+  if (score >= 55) return 'bg-zinc-800 text-zinc-300';
+  if (score >= 40) return 'bg-warning/10 text-warning';
+  return 'bg-negative/10 text-negative';
 }
 
 function minutesToTimeStr(mins: number): string {
@@ -134,7 +120,13 @@ function useWeekData(weekOffset: number) {
     const weekStart = startOfWeek(base, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(base, { weekStartsOn: 1 });
     const prevStart = subWeeks(weekStart, 1);
-    const prevEnd = subWeeks(weekEnd, 1);
+    let prevEnd = subWeeks(weekEnd, 1);
+    // Current in-progress week: clamp the comparison window to week-to-date
+    // (through the same weekday last week) so partial weeks compare like-for-like
+    if (weekOffset === 0) {
+      const wtdEnd = endOfDay(subWeeks(new Date(), 1));
+      if (isBefore(wtdEnd, prevEnd)) prevEnd = wtdEnd;
+    }
 
     const inWeek = (dateStr: string, start: Date, end: Date) => {
       const d = new Date(dateStr);
@@ -648,11 +640,13 @@ function ScoreCard({ label, score, sublabel, icon: Icon }: {
   icon: React.ElementType;
 }) {
   return (
-    <div className={`rounded-2xl border ${scoreBorder(score)} ${scoreBg(score)} p-4 text-center`}>
-      <Icon className={`h-5 w-5 mx-auto mb-2 ${scoreColor(score)}`} strokeWidth={1.5} />
-      <p className={`text-3xl font-bold ${scoreColor(score)}`}>{score}</p>
-      <p className="text-[11px] font-semibold text-zinc-300 mt-1">{label}</p>
-      <p className={`text-[10px] mt-0.5 ${scoreColor(score)}`}>{sublabel}</p>
+    <div className="card-surface p-4 text-center">
+      <Icon className="h-5 w-5 mx-auto mb-2 text-zinc-500" strokeWidth={1.5} />
+      <p className="text-[28px] leading-tight font-medium tabular-nums text-zinc-100">{score}</p>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 mt-1">{label}</p>
+      <span className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${scoreBadgeClass(score)}`}>
+        {sublabel}
+      </span>
     </div>
   );
 }
@@ -705,6 +699,8 @@ export function WeeklyRecap() {
   const nextFocus = useMemo(() => generateNextWeekFocus(scores, training, sleep, steps, bw), [scores, training, sleep, steps, bw]);
 
   const isCurrentWeek = weekOffset === 0;
+  // Current week comparisons are clamped to week-to-date in useWeekData
+  const cmpNote = isCurrentWeek ? ` (to ${format(new Date(), 'EEE')})` : '';
   const weekLabel = `${format(data.weekStart, 'MMM d')} – ${format(data.weekEnd, 'MMM d')}`;
 
   // Mini chart data
@@ -733,7 +729,10 @@ export function WeeklyRecap() {
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
-            <span className="text-xs text-zinc-400 min-w-[120px]">{weekLabel}</span>
+            <span className="text-xs text-zinc-400 min-w-[120px]">
+              {weekLabel}
+              {isCurrentWeek && <span className="text-zinc-600"> · to date</span>}
+            </span>
             <button
               onClick={() => setWeekOffset((w) => Math.min(w + 1, 0))}
               className={`p-1 ${isCurrentWeek ? 'text-zinc-700' : 'text-zinc-500 active:text-zinc-300'}`}
@@ -781,7 +780,7 @@ export function WeeklyRecap() {
             <div className="space-y-2.5">
               {takeaways.map((t, i) => (
                 <div key={i} className="flex gap-2.5">
-                  <span className="mt-0.5 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-blue-400" />
+                  <span className="mt-0.5 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-accent" />
                   <p className="text-sm text-zinc-300 leading-relaxed">{t}</p>
                 </div>
               ))}
@@ -791,8 +790,8 @@ export function WeeklyRecap() {
           {/* ── Coach Summary ────────────────────────── */}
           <Card className="border-zinc-700/40 bg-zinc-900/70">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                <Zap className="h-4 w-4 text-blue-400" />
+              <div className="mt-0.5 h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+                <Zap className="h-4 w-4 text-accent" />
               </div>
               <div>
                 <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Coach Summary</p>
@@ -810,26 +809,26 @@ export function WeeklyRecap() {
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-zinc-500">Strength</p>
-                <p className="text-lg font-bold text-zinc-100">{training.strengthCount} <span className="text-sm font-normal text-zinc-500">sessions</span></p>
+                <p className="text-lg font-semibold tabular-nums text-zinc-100">{training.strengthCount} <span className="text-sm font-normal text-zinc-500">sessions</span></p>
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-zinc-500">Cardio</p>
-                <p className="text-lg font-bold text-zinc-100">{training.cardioCount} <span className="text-sm font-normal text-zinc-500">sessions</span></p>
+                <p className="text-lg font-semibold tabular-nums text-zinc-100">{training.cardioCount} <span className="text-sm font-normal text-zinc-500">sessions</span></p>
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-zinc-500">Volume</p>
-                <p className="text-lg font-bold text-zinc-100">
+                <p className="text-lg font-semibold tabular-nums text-zinc-100">
                   {training.totalVolume >= 1000 ? `${(training.totalVolume / 1000).toFixed(1)}t` : `${training.totalVolume}kg`}
                 </p>
                 {training.prevVolume > 0 && (
-                  <p className={`text-[10px] ${training.totalVolume >= training.prevVolume ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {pctStr(training.totalVolume, training.prevVolume)} vs last week
+                  <p className={`text-[10px] ${training.totalVolume >= training.prevVolume ? 'text-positive' : 'text-negative'}`}>
+                    {pctStr(training.totalVolume, training.prevVolume)} vs last week{cmpNote}
                   </p>
                 )}
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-zinc-500">Adherence</p>
-                <p className="text-lg font-bold text-zinc-100">{training.adherence}%</p>
+                <p className="text-lg font-semibold tabular-nums text-zinc-100">{training.adherence}%</p>
               </div>
             </div>
             {training.bestSession && training.bestSession.volume > 0 && (
@@ -839,12 +838,12 @@ export function WeeklyRecap() {
               </div>
             )}
             <div className="mt-3 flex items-center gap-1.5">
-              {training.progressionSignal === 'up' && <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />}
-              {training.progressionSignal === 'down' && <TrendingDown className="h-3.5 w-3.5 text-red-400" />}
+              {training.progressionSignal === 'up' && <TrendingUp className="h-3.5 w-3.5 text-positive" />}
+              {training.progressionSignal === 'down' && <TrendingDown className="h-3.5 w-3.5 text-negative" />}
               {training.progressionSignal === 'stable' && <Minus className="h-3.5 w-3.5 text-zinc-500" />}
               <span className={`text-xs ${
-                training.progressionSignal === 'up' ? 'text-emerald-400' :
-                training.progressionSignal === 'down' ? 'text-red-400' : 'text-zinc-500'
+                training.progressionSignal === 'up' ? 'text-positive' :
+                training.progressionSignal === 'down' ? 'text-negative' : 'text-zinc-500'
               }`}>
                 {training.progressionSignal === 'up' ? 'Volume progressing' :
                  training.progressionSignal === 'down' ? 'Volume declined' : 'Volume stable'}
@@ -856,42 +855,42 @@ export function WeeklyRecap() {
           <Card>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Moon className="h-4 w-4 text-violet-400" />
+                <Moon className="h-4 w-4 text-accent" />
                 <CardTitle>Sleep</CardTitle>
               </div>
-              <MiniLine data={sleepSparkData} color="#8b5cf6" />
+              <MiniLine data={sleepSparkData} color="var(--color-accent)" />
             </div>
             {sleep.entryCount > 0 ? (
               <>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                   <div>
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500">Avg Score</p>
-                    <p className="text-lg font-bold text-zinc-100">{sleep.avgScore}</p>
+                    <p className="text-lg font-semibold tabular-nums text-zinc-100">{sleep.avgScore}</p>
                     {sleep.prevAvgScore > 0 && (
-                      <p className={`text-[10px] ${sleep.avgScore >= sleep.prevAvgScore ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {pctStr(sleep.avgScore, sleep.prevAvgScore)} vs last week
+                      <p className={`text-[10px] ${sleep.avgScore >= sleep.prevAvgScore ? 'text-positive' : 'text-negative'}`}>
+                        {pctStr(sleep.avgScore, sleep.prevAvgScore)} vs last week{cmpNote}
                       </p>
                     )}
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500">Avg Duration</p>
-                    <p className="text-lg font-bold text-zinc-100">{durationStr(sleep.avgDuration)}</p>
+                    <p className="text-lg font-semibold tabular-nums text-zinc-100">{durationStr(sleep.avgDuration)}</p>
                     {sleep.prevAvgDuration > 0 && (
-                      <p className={`text-[10px] ${sleep.avgDuration >= sleep.prevAvgDuration ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {pctStr(sleep.avgDuration, sleep.prevAvgDuration)} vs last week
+                      <p className={`text-[10px] ${sleep.avgDuration >= sleep.prevAvgDuration ? 'text-positive' : 'text-negative'}`}>
+                        {pctStr(sleep.avgDuration, sleep.prevAvgDuration)} vs last week{cmpNote}
                       </p>
                     )}
                   </div>
                   {sleep.avgBedtime !== null && (
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-zinc-500">Avg Bedtime</p>
-                      <p className="text-lg font-bold text-zinc-100">{minutesToTimeStr(sleep.avgBedtime)}</p>
+                      <p className="text-lg font-semibold tabular-nums text-zinc-100">{minutesToTimeStr(sleep.avgBedtime)}</p>
                     </div>
                   )}
                   {sleep.bedtimeConsistency !== null && (
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-zinc-500">Bedtime Variance</p>
-                      <p className={`text-lg font-bold ${sleep.bedtimeConsistency <= 30 ? 'text-emerald-400' : sleep.bedtimeConsistency <= 60 ? 'text-amber-400' : 'text-red-400'}`}>
+                      <p className={`text-lg font-semibold tabular-nums ${sleep.bedtimeConsistency <= 30 ? 'text-positive' : sleep.bedtimeConsistency <= 60 ? 'text-warning' : 'text-negative'}`}>
                         &plusmn;{sleep.bedtimeConsistency}m
                       </p>
                     </div>
@@ -902,13 +901,13 @@ export function WeeklyRecap() {
                     {sleep.bestNight && (
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-zinc-500">Best</p>
-                        <p className="text-xs text-emerald-400">{sleep.bestNight.sleepScore} — {format(new Date(sleep.bestNight.date), 'EEE')}</p>
+                        <p className="text-xs text-positive">{sleep.bestNight.sleepScore} — {format(new Date(sleep.bestNight.date), 'EEE')}</p>
                       </div>
                     )}
                     {sleep.worstNight && sleep.worstNight.date !== sleep.bestNight?.date && (
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-zinc-500">Worst</p>
-                        <p className="text-xs text-red-400">{sleep.worstNight.sleepScore} — {format(new Date(sleep.worstNight.date), 'EEE')}</p>
+                        <p className="text-xs text-negative">{sleep.worstNight.sleepScore} — {format(new Date(sleep.worstNight.date), 'EEE')}</p>
                       </div>
                     )}
                   </div>
@@ -923,26 +922,26 @@ export function WeeklyRecap() {
           <Card>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Footprints className="h-4 w-4 text-blue-400" />
+                <Footprints className="h-4 w-4 text-accent" />
                 <CardTitle>Movement</CardTitle>
               </div>
-              <MiniBar data={stepsSparkData} color="#3b82f6" />
+              <MiniBar data={stepsSparkData} color="var(--color-accent)" />
             </div>
             {steps.entryCount > 0 ? (
               <>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                   <div>
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500">Daily Avg</p>
-                    <p className="text-lg font-bold text-zinc-100">{fmtSteps(steps.avgSteps)}</p>
+                    <p className="text-lg font-semibold tabular-nums text-zinc-100">{fmtSteps(steps.avgSteps)}</p>
                     {steps.prevAvgSteps > 0 && (
-                      <p className={`text-[10px] ${steps.avgSteps >= steps.prevAvgSteps ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {pctStr(steps.avgSteps, steps.prevAvgSteps)} vs last week
+                      <p className={`text-[10px] ${steps.avgSteps >= steps.prevAvgSteps ? 'text-positive' : 'text-negative'}`}>
+                        {pctStr(steps.avgSteps, steps.prevAvgSteps)} vs last week{cmpNote}
                       </p>
                     )}
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500">Weekly Total</p>
-                    <p className="text-lg font-bold text-zinc-100">{fmtSteps(steps.totalSteps)}</p>
+                    <p className="text-lg font-semibold tabular-nums text-zinc-100">{fmtSteps(steps.totalSteps)}</p>
                   </div>
                 </div>
                 {(steps.bestDay || steps.lowestDay) && (
@@ -950,7 +949,7 @@ export function WeeklyRecap() {
                     {steps.bestDay && (
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-zinc-500">Best Day</p>
-                        <p className="text-xs text-emerald-400">
+                        <p className="text-xs text-positive">
                           {fmtSteps(steps.bestDay.stepCount)} — {format(new Date(steps.bestDay.date), 'EEE')}
                           {steps.bestDay.note && <span className="text-zinc-500"> · {steps.bestDay.note}</span>}
                         </p>
@@ -974,21 +973,21 @@ export function WeeklyRecap() {
           <Card>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Scale className="h-4 w-4 text-emerald-400" />
+                <Scale className="h-4 w-4 text-positive" />
                 <CardTitle>Bodyweight</CardTitle>
               </div>
-              <MiniLine data={bwSparkData} color="#34d399" />
+              <MiniLine data={bwSparkData} color="var(--color-positive)" />
             </div>
             {bw.weekAvg !== null ? (
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-zinc-500">Week Avg</p>
-                  <p className="text-lg font-bold text-zinc-100">{bw.weekAvg} <span className="text-sm font-normal text-zinc-500">kg</span></p>
+                  <p className="text-lg font-semibold tabular-nums text-zinc-100">{bw.weekAvg} <span className="text-sm font-normal text-zinc-500">kg</span></p>
                 </div>
                 {bw.change !== null && (
                   <div>
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500">vs Last Week</p>
-                    <p className={`text-lg font-bold ${Math.abs(bw.change) <= 0.3 ? 'text-zinc-300' : bw.change > 0 ? 'text-amber-400' : 'text-blue-400'}`}>
+                    <p className={`text-lg font-semibold tabular-nums ${Math.abs(bw.change) <= 0.3 ? 'text-zinc-300' : bw.change > 0 ? 'text-warning' : 'text-accent'}`}>
                       {bw.change > 0 ? '+' : ''}{bw.change} kg
                     </p>
                   </div>
@@ -997,7 +996,7 @@ export function WeeklyRecap() {
             ) : bw.latest ? (
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Latest recorded</p>
-                <p className="text-lg font-bold text-zinc-100">
+                <p className="text-lg font-semibold tabular-nums text-zinc-100">
                   {bw.latest.weight} <span className="text-sm font-normal text-zinc-500">kg</span>
                   <span className="text-xs text-zinc-600 ml-2">{format(new Date(bw.latest.date), 'MMM d')}</span>
                 </p>
@@ -1010,7 +1009,7 @@ export function WeeklyRecap() {
           {/* ── Recovery Interpretation ───────────────── */}
           <Card className="border-zinc-700/40">
             <div className="flex items-center gap-2 mb-2">
-              <Heart className="h-4 w-4 text-rose-400" />
+              <Heart className="h-4 w-4 text-zinc-400" />
               <CardTitle>Recovery Readiness</CardTitle>
             </div>
             <p className="text-sm text-zinc-300 leading-relaxed">
@@ -1030,8 +1029,8 @@ export function WeeklyRecap() {
           <div className="grid grid-cols-2 gap-2.5">
             <Card>
               <div className="flex items-center gap-1.5 mb-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">Went Well</p>
+                <CheckCircle2 className="h-3.5 w-3.5 text-positive" />
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-positive">Went Well</p>
               </div>
               <div className="space-y-1.5">
                 {wentWell.map((item, i) => (
@@ -1041,8 +1040,8 @@ export function WeeklyRecap() {
             </Card>
             <Card>
               <div className="flex items-center gap-1.5 mb-2">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-400">Attention</p>
+                <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-warning">Attention</p>
               </div>
               <div className="space-y-1.5">
                 {needsAttention.map((item, i) => (
@@ -1055,13 +1054,13 @@ export function WeeklyRecap() {
           {/* ── Next Week Focus ───────────────────────── */}
           <Card>
             <div className="flex items-center gap-2 mb-3">
-              <Target className="h-4 w-4 text-blue-400" />
+              <Target className="h-4 w-4 text-accent" />
               <CardTitle>Next Week Focus</CardTitle>
             </div>
             <div className="space-y-2">
               {nextFocus.map((item, i) => (
                 <div key={i} className="flex items-start gap-2.5">
-                  <span className="mt-1.5 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-blue-400" />
+                  <span className="mt-1.5 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-accent" />
                   <p className="text-sm text-zinc-200">{item}</p>
                 </div>
               ))}

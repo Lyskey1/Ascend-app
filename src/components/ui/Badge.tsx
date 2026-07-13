@@ -9,9 +9,9 @@ interface BadgeProps {
 
 const variants = {
   default: 'bg-zinc-800 text-zinc-300',
-  success: 'bg-emerald-500/15 text-emerald-400',
-  warning: 'bg-amber-500/15 text-amber-400',
-  danger: 'bg-red-500/15 text-red-400',
+  success: 'bg-positive/10 text-positive',
+  warning: 'bg-warning/10 text-warning',
+  danger: 'bg-negative/10 text-negative',
   neutral: 'bg-zinc-700/50 text-zinc-400',
 };
 

@@ -240,13 +240,26 @@ export async function startPastWorkoutSession(
   const exerciseList = await db.exercises.toArray();
   const exerciseMap = new Map(exerciseList.map((e) => [e.id, e]));
 
+  const exercises = buildSessionExercises(template.exercises, exerciseMap);
+
+  // Single source of truth for cardio duration: a session-level duration
+  // prefills the cardio exercise's duration when it's the only exercise
+  if (
+    durationMinutes > 0 &&
+    exercises.length === 1 &&
+    exercises[0].exerciseType === 'cardio' &&
+    !exercises[0].cardioDuration
+  ) {
+    exercises[0].cardioDuration = durationMinutes;
+  }
+
   const session: WorkoutSession = {
     id: crypto.randomUUID(),
     templateId: template.id,
     templateName: template.name,
     startedAt,
     duration: durationMinutes * 60,
-    exercises: buildSessionExercises(template.exercises, exerciseMap),
+    exercises,
     tags: [],
     status: 'active',
     manualEntry: true,
@@ -264,20 +277,33 @@ export async function completeSession(sessionId: string) {
   const session = await db.sessions.get(sessionId);
   if (!session) return;
 
-  let completedAt: string;
   let duration: number;
 
   if (session.manualEntry) {
     duration = session.duration ?? 0;
-    completedAt = new Date(
-      new Date(session.startedAt).getTime() + duration * 1000
-    ).toISOString();
   } else {
-    completedAt = new Date().toISOString();
     duration = Math.round(
-      (new Date(completedAt).getTime() - new Date(session.startedAt).getTime()) / 1000
+      (Date.now() - new Date(session.startedAt).getTime()) / 1000
     );
   }
+
+  // Cardio-only sessions: the duration entered on the cardio exercise
+  // is the source of truth for the session duration
+  const activeExercises = session.exercises.filter((e) => !e.skipped);
+  const isCardioOnly =
+    activeExercises.length > 0 &&
+    activeExercises.every((e) => e.exerciseType === 'cardio');
+  if (isCardioOnly) {
+    const cardioMinutes = activeExercises.reduce(
+      (sum, e) => sum + (e.cardioDuration ?? 0),
+      0
+    );
+    if (cardioMinutes > 0) duration = Math.round(cardioMinutes * 60);
+  }
+
+  const completedAt = session.manualEntry
+    ? new Date(new Date(session.startedAt).getTime() + duration * 1000).toISOString()
+    : new Date().toISOString();
 
   await db.sessions.update(sessionId, {
     status: 'completed',

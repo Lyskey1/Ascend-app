@@ -212,7 +212,7 @@ export function HistoryDetail() {
               <Pencil className="h-5 w-5" />
             </button>
           ) : (
-            <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-amber-400">
+            <span className="rounded-full bg-warning/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-warning">
               Editing
             </span>
           )}
@@ -421,8 +421,8 @@ function StrengthReadOnly({ exercise }: { exercise: WorkoutSessionExercise }) {
   return (
     <div className="px-4 pb-3">
       {exercise.warmupSets && exercise.warmupSets.length > 0 && (
-        <div className="mb-2 rounded-xl border border-amber-500/10 bg-amber-500/5 px-3 py-2">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-amber-500/70">
+        <div className="mb-2 rounded-xl border border-warning/10 bg-warning/5 px-3 py-2">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-warning/70">
             Warm-up
           </p>
           {exercise.warmupSets.map((ws, i) => {
@@ -432,7 +432,7 @@ function StrengthReadOnly({ exercise }: { exercise: WorkoutSessionExercise }) {
                 key={ws.id}
                 className="flex items-center gap-3 py-0.5 text-xs text-zinc-400"
               >
-                <span className="w-6 text-center font-bold text-amber-500/50">W{i + 1}</span>
+                <span className="w-6 text-center font-bold text-warning/50">W{i + 1}</span>
                 {isTimeBased && wsSecs != null ? (
                   <span>{formatSeconds(wsSecs)}</span>
                 ) : (
@@ -637,9 +637,9 @@ function StrengthEditor({
   return (
     <div className="px-3 pb-3 space-y-2">
       {/* Warm-ups */}
-      <div className="rounded-xl border border-amber-500/10 bg-amber-500/5 overflow-hidden">
+      <div className="rounded-xl border border-warning/10 bg-warning/5 overflow-hidden">
         <div className="flex items-center justify-between px-3 pt-2 pb-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-500/70">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-warning/70">
             Warm-up
           </span>
         </div>
@@ -653,7 +653,7 @@ function StrengthEditor({
             const secs = total > 0 ? total % 60 : null;
             return (
               <div key={ws.id} className="flex items-center gap-2 rounded-lg bg-zinc-900/40 px-2 py-1.5">
-                <span className="w-7 text-center text-[10px] font-bold text-amber-500/60">W{i + 1}</span>
+                <span className="w-7 text-center text-[10px] font-bold text-warning/60">W{i + 1}</span>
                 {isTimeBased && ws.durationSeconds != null ? (
                   <>
                     <IntegerInput
@@ -663,7 +663,7 @@ function StrengthEditor({
                         const next = (m ?? 0) * 60 + (secs ?? 0);
                         onWarmupChange(ws.id, { durationSeconds: next === 0 ? null : next });
                       }}
-                      className="w-12 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-amber-500/40"
+                      className="w-12 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-warning/40"
                     />
                     <span className="text-xs text-zinc-600">:</span>
                     <IntegerInput
@@ -674,7 +674,7 @@ function StrengthEditor({
                         const next = (mins ?? 0) * 60 + (safe ?? 0);
                         onWarmupChange(ws.id, { durationSeconds: next === 0 ? null : next });
                       }}
-                      className="w-12 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-amber-500/40"
+                      className="w-12 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-warning/40"
                     />
                   </>
                 ) : (
@@ -683,13 +683,13 @@ function StrengthEditor({
                       value={ws.weight}
                       placeholder="kg"
                       onChange={(n) => onWarmupChange(ws.id, { weight: n })}
-                      className="w-16 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-amber-500/40"
+                      className="w-16 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-warning/40"
                     />
                     <IntegerInput
                       value={ws.reps}
                       placeholder="reps"
                       onChange={(n) => onWarmupChange(ws.id, { reps: n })}
-                      className="w-14 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-amber-500/40"
+                      className="w-14 rounded-lg bg-zinc-800/50 px-2 py-1.5 text-center text-xs font-medium text-zinc-100 placeholder-zinc-600 outline-none ring-1 ring-zinc-700/50 focus:ring-warning/40"
                     />
                   </>
                 )}
@@ -705,7 +705,7 @@ function StrengthEditor({
         </div>
         <button
           onClick={onAddWarmup}
-          className="flex w-full items-center justify-center gap-1 border-t border-amber-500/10 py-1.5 text-[10px] font-medium text-amber-500/60 active:text-amber-400"
+          className="flex w-full items-center justify-center gap-1 border-t border-warning/10 py-1.5 text-[10px] font-medium text-warning/60 active:text-warning"
         >
           <Plus className="h-3 w-3" />
           Add warm-up set

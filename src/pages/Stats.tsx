@@ -20,6 +20,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  AreaChart,
+  Area,
   BarChart,
   Bar,
   XAxis,
@@ -479,11 +481,11 @@ export function Stats() {
           {heatmapData.map((day) => {
             const bg =
               day.status === 'workout'
-                ? 'bg-emerald-500'
+                ? 'bg-positive'
                 : day.status === 'missed'
-                  ? 'bg-red-500/80'
+                  ? 'bg-negative/70'
                   : day.status === 'off'
-                    ? 'bg-sky-500/30'
+                    ? 'bg-accent/30'
                     : day.status === 'inactive'
                       ? 'bg-zinc-800/20'
                       : 'bg-zinc-800/50';
@@ -508,7 +510,7 @@ export function Stats() {
         </div>
         <div className="mt-2 flex items-center gap-3 flex-wrap text-[10px] text-zinc-600">
           <div className="flex items-center gap-1">
-            <div className="h-2.5 w-2.5 rounded-[2px] bg-emerald-500" />
+            <div className="h-2.5 w-2.5 rounded-[2px] bg-positive" />
             Workout
           </div>
           <div className="flex items-center gap-1">
@@ -517,13 +519,13 @@ export function Stats() {
           </div>
           {scheduledDays.size > 0 && (
             <div className="flex items-center gap-1">
-              <div className="h-2.5 w-2.5 rounded-[2px] bg-red-500/80" />
+              <div className="h-2.5 w-2.5 rounded-[2px] bg-negative/70" />
               Missed
             </div>
           )}
           {vacations.length > 0 && (
             <div className="flex items-center gap-1">
-              <div className="h-2.5 w-2.5 rounded-[2px] bg-sky-500/30" />
+              <div className="h-2.5 w-2.5 rounded-[2px] bg-accent/30" />
               Vacation
             </div>
           )}
@@ -639,7 +641,7 @@ export function Stats() {
                     className="flex items-center justify-between rounded-xl bg-zinc-800/30 px-3 py-2"
                   >
                     <div className="flex items-center gap-2">
-                      <Palmtree className="h-3.5 w-3.5 text-sky-500/60" />
+                      <Palmtree className="h-3.5 w-3.5 text-accent/60" />
                       <div>
                         <p className="text-xs font-medium text-zinc-300">
                           {format(new Date(v.start + 'T12:00:00'), 'MMM d')} — {format(new Date(v.end + 'T12:00:00'), 'MMM d, yyyy')}
@@ -669,18 +671,24 @@ export function Stats() {
           <CardTitle className="mb-3">Bodyweight Evolution</CardTitle>
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={bodyweightData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" vertical={false} />
+              <AreaChart data={bodyweightData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                <defs>
+                  <linearGradient id="bwStatsFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="var(--color-accent)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" strokeOpacity={0.6} vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 9, fill: 'var(--color-zinc-500)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                   tickLine={false}
                   axisLine={false}
                   interval="preserveStartEnd"
                 />
                 <YAxis
                   domain={['dataMin - 0.5', 'dataMax + 0.5']}
-                  tick={{ fontSize: 9, fill: 'var(--color-zinc-500)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -692,15 +700,16 @@ export function Stats() {
                     fontSize: '11px',
                   }}
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="weight"
-                  stroke="var(--color-zinc-100)"
+                  stroke="var(--color-accent)"
                   strokeWidth={2}
-                  dot={{ r: 2, fill: 'var(--color-zinc-100)', strokeWidth: 0 }}
+                  fill="url(#bwStatsFill)"
+                  dot={{ r: 2, fill: 'var(--color-accent)', strokeWidth: 0 }}
                   activeDot={{ r: 4 }}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </Card>
@@ -712,15 +721,15 @@ export function Stats() {
         <div className="h-44">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={weeklyVolumeData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" strokeOpacity={0.6} vertical={false} />
               <XAxis
                 dataKey="week"
-                tick={{ fontSize: 9, fill: 'var(--color-zinc-500)' }}
+                tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                tick={{ fontSize: 9, fill: 'var(--color-zinc-500)' }}
+                tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}t` : `${v}`)}
@@ -734,7 +743,7 @@ export function Stats() {
                 }}
                 formatter={(value) => [`${Number(value).toLocaleString()} kg`, 'Volume']}
               />
-              <Bar dataKey="volume" fill="var(--color-zinc-100)" radius={[4, 4, 0, 0]} maxBarSize={24} />
+              <Bar dataKey="volume" fill="var(--color-accent)" fillOpacity={0.85} radius={[4, 4, 0, 0]} maxBarSize={24} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -746,15 +755,15 @@ export function Stats() {
         <div className="h-36">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={workoutsPerWeek} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" strokeOpacity={0.6} vertical={false} />
               <XAxis
                 dataKey="week"
-                tick={{ fontSize: 9, fill: 'var(--color-zinc-500)' }}
+                tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                tick={{ fontSize: 9, fill: 'var(--color-zinc-500)' }}
+                tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                 tickLine={false}
                 axisLine={false}
                 allowDecimals={false}
@@ -767,7 +776,7 @@ export function Stats() {
                   fontSize: '11px',
                 }}
               />
-              <Bar dataKey="count" fill="#a78bfa" radius={[4, 4, 0, 0]} maxBarSize={24} name="Workouts" />
+              <Bar dataKey="count" fill="var(--color-accent)" fillOpacity={0.55} radius={[4, 4, 0, 0]} maxBarSize={24} name="Workouts" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -784,17 +793,17 @@ export function Stats() {
                 <PolarGrid stroke="var(--color-zinc-800)" />
                 <PolarAngleAxis
                   dataKey="muscle"
-                  tick={{ fontSize: 9, fill: 'var(--color-zinc-400)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-400)' }}
                 />
                 <PolarRadiusAxis
-                  tick={{ fontSize: 8, fill: 'var(--color-zinc-600)' }}
+                  tick={{ fontSize: 10, fill: 'var(--color-zinc-600)' }}
                   axisLine={false}
                   domain={[0, 100]}
                 />
                 <Radar
                   dataKey="score"
-                  stroke="#3b82f6"
-                  fill="#3b82f6"
+                  stroke="var(--color-accent)"
+                  fill="var(--color-accent)"
                   fillOpacity={0.15}
                   strokeWidth={2}
                 />
@@ -815,8 +824,8 @@ export function Stats() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-zinc-300">{d.muscle}</span>
                     <span className={`text-[10px] font-medium ${
-                      d.trend === 'up' ? 'text-emerald-400' :
-                      d.trend === 'down' ? 'text-red-400' : 'text-zinc-500'
+                      d.trend === 'up' ? 'text-positive' :
+                      d.trend === 'down' ? 'text-negative' : 'text-zinc-500'
                     }`}>
                       {d.trend === 'up' ? '↑ Up' : d.trend === 'down' ? '↓ Down' : '→ Stable'}
                     </span>
@@ -827,7 +836,7 @@ export function Stats() {
                 </div>
                 <div className="h-2 rounded-full bg-zinc-800/50">
                   <div
-                    className="h-2 rounded-full bg-blue-500/80 transition-all"
+                    className="h-2 rounded-full bg-accent/80 transition-all"
                     style={{ width: `${d.composite}%` }}
                   />
                 </div>
@@ -861,16 +870,16 @@ export function Stats() {
               <div className="h-36">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={exerciseProgressionData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" strokeOpacity={0.6} vertical={false} />
                     <XAxis
                       dataKey="date"
-                      tick={{ fontSize: 9, fill: 'var(--color-zinc-500)' }}
+                      tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                       tickLine={false}
                       axisLine={false}
                       interval="preserveStartEnd"
                     />
                     <YAxis
-                      tick={{ fontSize: 9, fill: 'var(--color-zinc-500)' }}
+                      tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                       tickLine={false}
                       axisLine={false}
                     />
@@ -885,9 +894,9 @@ export function Stats() {
                     <Line
                       type="monotone"
                       dataKey="weight"
-                      stroke="#34d399"
+                      stroke="var(--color-positive)"
                       strokeWidth={2}
-                      dot={{ r: 3, fill: '#34d399', strokeWidth: 0 }}
+                      dot={{ r: 3, fill: 'var(--color-positive)', strokeWidth: 0 }}
                       name="Weight"
                     />
                   </LineChart>
@@ -901,16 +910,16 @@ export function Stats() {
               <div className="h-36">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={exerciseProgressionData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" strokeOpacity={0.6} vertical={false} />
                     <XAxis
                       dataKey="date"
-                      tick={{ fontSize: 9, fill: 'var(--color-zinc-500)' }}
+                      tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                       tickLine={false}
                       axisLine={false}
                       interval="preserveStartEnd"
                     />
                     <YAxis
-                      tick={{ fontSize: 9, fill: 'var(--color-zinc-500)' }}
+                      tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                       tickLine={false}
                       axisLine={false}
                     />
@@ -922,7 +931,7 @@ export function Stats() {
                         fontSize: '11px',
                       }}
                     />
-                    <Bar dataKey="volume" fill="#818cf8" radius={[4, 4, 0, 0]} maxBarSize={20} name="Volume" />
+                    <Bar dataKey="volume" fill="var(--color-accent)" fillOpacity={0.85} radius={[4, 4, 0, 0]} maxBarSize={20} name="Volume" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

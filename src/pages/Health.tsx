@@ -40,16 +40,16 @@ function trendIcon(current: number, previous: number, invert = false) {
   const pct = ((current - previous) / previous) * 100;
   const isUp = invert ? pct < -3 : pct > 3;
   const isDown = invert ? pct > 3 : pct < -3;
-  if (isUp) return { icon: TrendingUp, color: 'text-emerald-400', label: `${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%` };
-  if (isDown) return { icon: TrendingDown, color: 'text-red-400', label: `${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%` };
+  if (isUp) return { icon: TrendingUp, color: 'text-positive', label: `${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%` };
+  if (isDown) return { icon: TrendingDown, color: 'text-negative', label: `${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%` };
   return { icon: Minus, color: 'text-zinc-500', label: 'Stable' };
 }
 
 function scoreColor(score: number): string {
-  if (score >= 80) return 'text-emerald-400';
-  if (score >= 60) return 'text-blue-400';
-  if (score >= 40) return 'text-amber-400';
-  return 'text-red-400';
+  if (score >= 80) return 'text-positive';
+  if (score >= 60) return 'text-accent';
+  if (score >= 40) return 'text-warning';
+  return 'text-negative';
 }
 
 // ─── Component ──────────────────────────────────────────
@@ -130,8 +130,8 @@ export function HealthPage() {
       <Card onClick={() => navigate('/bodyweight')} className="group">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-              <Scale className="h-5 w-5 text-emerald-400" />
+            <div className="h-10 w-10 rounded-xl bg-positive/10 flex items-center justify-center">
+              <Scale className="h-5 w-5 text-positive" />
             </div>
             <div>
               <CardTitle>Body Weight</CardTitle>
@@ -178,8 +178,8 @@ export function HealthPage() {
       <Card onClick={() => navigate('/steps')} className="group">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-              <Footprints className="h-5 w-5 text-blue-400" />
+            <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
+              <Footprints className="h-5 w-5 text-accent" />
             </div>
             <div>
               <CardTitle>Daily Steps</CardTitle>
@@ -215,7 +215,7 @@ export function HealthPage() {
               <div className="h-10 w-20">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stepsSummary.sparkData}>
-                    <Bar dataKey="v" fill="#3b82f6" radius={[1, 1, 0, 0]} opacity={0.6} />
+                    <Bar dataKey="v" fill="var(--color-accent)" radius={[1, 1, 0, 0]} opacity={0.6} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -268,7 +268,7 @@ export function HealthPage() {
               <div className="h-10 w-20">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={sleepSummary.sparkData}>
-                    <Line dataKey="v" type="monotone" stroke="#8b5cf6" strokeWidth={1.5} dot={false} />
+                    <Line dataKey="v" type="monotone" stroke="var(--color-accent)" strokeWidth={1.5} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -284,15 +284,15 @@ export function HealthPage() {
           <CardTitle className="mb-2">Recovery Snapshot</CardTitle>
           <div className="space-y-2">
             {sleepSummary.avg7Score >= 70 && stepsSummary.avg7 >= 7000 ? (
-              <p className="text-sm text-emerald-400">
+              <p className="text-sm text-positive">
                 You're recovering well — good sleep and solid daily movement this week.
               </p>
             ) : sleepSummary.avg7Score < 60 ? (
-              <p className="text-sm text-amber-400">
+              <p className="text-sm text-warning">
                 Sleep quality has been low recently. Consider prioritizing recovery before pushing hard in training.
               </p>
             ) : stepsSummary.avg7 < 5000 ? (
-              <p className="text-sm text-amber-400">
+              <p className="text-sm text-warning">
                 Daily movement has been low. Try to get more steps in on non-training days.
               </p>
             ) : (

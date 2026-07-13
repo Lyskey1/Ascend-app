@@ -219,7 +219,7 @@ export function History() {
             onClick={() => setNameFilter(null)}
             className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors ${
               nameFilter === null
-                ? 'border-blue-500/60 bg-blue-500/15 text-blue-300'
+                ? 'border-accent/60 bg-accent/15 text-blue-300'
                 : 'border-zinc-700/60 bg-zinc-800/40 text-zinc-400 active:bg-zinc-700/40'
             }`}
           >
@@ -232,7 +232,7 @@ export function History() {
               onClick={() => setNameFilter(nameFilter === name ? null : name)}
               className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors ${
                 nameFilter === name
-                  ? 'border-blue-500/60 bg-blue-500/15 text-blue-300'
+                  ? 'border-accent/60 bg-accent/15 text-blue-300'
                   : 'border-zinc-800/50 bg-zinc-900/30 text-zinc-400 active:bg-zinc-800/40'
               }`}
             >
@@ -307,7 +307,7 @@ export function History() {
                         tabIndex={0}
                         onClick={(e) => handleRequestDelete(e, session)}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); setDeleteConfirmSession(session); } }}
-                        className="rounded-lg p-2 -mr-1 text-zinc-700 hover:text-red-400 active:text-red-400 hover:bg-zinc-800/60 active:bg-zinc-800/60 transition-colors flex-shrink-0"
+                        className="rounded-lg p-2 -mr-1 text-zinc-700 hover:text-negative active:text-negative hover:bg-zinc-800/60 active:bg-zinc-800/60 transition-colors flex-shrink-0"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </div>
@@ -474,7 +474,7 @@ export function History() {
             <p className="flex-1 text-sm text-zinc-300">Moved to Trash</p>
             <button
               onClick={handleUndo}
-              className="rounded-lg bg-zinc-700/50 px-3 py-1.5 text-sm font-semibold text-blue-400 active:text-blue-300 transition-colors"
+              className="rounded-lg bg-zinc-700/50 px-3 py-1.5 text-sm font-semibold text-accent active:text-blue-300 transition-colors"
             >
               Undo
             </button>

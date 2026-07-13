@@ -1,8 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  --color-zinc-925: #101013;
+  --color-zinc-925: hsl(240 5% 7%);
   --font-sans: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  /* Semantic tokens — dark values are the primary design targets,
+     light overrides live in :root below */
+  --color-accent: hsl(215 60% 55%);
+  --color-positive: hsl(160 55% 48%);
+  --color-positive-strong: hsl(160 60% 38%);
+  --color-negative: hsl(4 65% 58%);
+  --color-warning: hsl(38 60% 55%);
 }
 
 /* ── Light theme (default when .dark is absent) ────── */
@@ -10,38 +18,67 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   color-scheme: light;
 
-  --color-white: #18181b;
-  --color-zinc-50: #09090b;
-  --color-zinc-100: #18181b;
-  --color-zinc-200: #27272a;
-  --color-zinc-300: #3f3f46;
-  --color-zinc-400: #52525b;
-  --color-zinc-500: #71717a;
-  --color-zinc-600: #a1a1aa;
-  --color-zinc-700: #d4d4d8;
-  --color-zinc-800: #e4e4e7;
-  --color-zinc-900: #f4f4f5;
-  --color-zinc-925: #f9f9fa;
-  --color-zinc-950: #fafafa;
+  --color-white: hsl(240 6% 10%);
+  --color-zinc-50: hsl(240 6% 4%);
+  --color-zinc-100: hsl(240 6% 10%);
+  --color-zinc-200: hsl(240 6% 16%);
+  --color-zinc-300: hsl(240 5% 26%);
+  --color-zinc-400: hsl(240 5% 36%);
+  --color-zinc-500: hsl(240 5% 45%);
+  --color-zinc-600: hsl(240 4% 60%);
+  --color-zinc-700: hsl(240 5% 80%);
+  --color-zinc-800: hsl(240 6% 87%);
+  --color-zinc-900: hsl(240 6% 93%);
+  --color-zinc-925: hsl(240 6% 96%);
+  --color-zinc-950: hsl(0 0% 99%);
+
+  --color-accent: hsl(215 60% 45%);
+  --color-positive: hsl(160 60% 34%);
+  --color-positive-strong: hsl(160 65% 26%);
+  --color-negative: hsl(4 60% 47%);
+  --color-warning: hsl(36 70% 40%);
+
+  --card-grad-from: hsl(0 0% 100%);
+  --card-grad-to: hsl(240 6% 97%);
+  --card-highlight: rgba(255, 255, 255, 0.6);
 }
 
 /* ── Dark theme ────────────────────────────────────── */
 .dark {
   color-scheme: dark;
 
-  --color-white: #ffffff;
-  --color-zinc-50: #fafafa;
-  --color-zinc-100: #f4f4f5;
-  --color-zinc-200: #e4e4e7;
-  --color-zinc-300: #d4d4d8;
-  --color-zinc-400: #a1a1aa;
-  --color-zinc-500: #71717a;
-  --color-zinc-600: #52525b;
-  --color-zinc-700: #3f3f46;
-  --color-zinc-800: #27272a;
-  --color-zinc-900: #18181b;
-  --color-zinc-925: #101013;
-  --color-zinc-950: #09090b;
+  --color-white: hsl(0 0% 100%);
+  --color-zinc-50: hsl(0 0% 98%);
+  --color-zinc-100: hsl(0 0% 96%);
+  --color-zinc-200: hsl(240 4% 85%);
+  --color-zinc-300: hsl(240 4% 75%);
+  --color-zinc-400: hsl(240 5% 64%);
+  --color-zinc-500: hsl(240 5% 55%);
+  --color-zinc-600: hsl(240 5% 38%);
+  --color-zinc-700: hsl(240 5% 24%);
+  --color-zinc-800: hsl(240 6% 14%);
+  --color-zinc-900: hsl(240 5% 10%);
+  --color-zinc-925: hsl(240 5% 7%);
+  --color-zinc-950: hsl(240 6% 4%);
+
+  --color-accent: hsl(215 60% 55%);
+  --color-positive: hsl(160 55% 48%);
+  --color-positive-strong: hsl(160 60% 38%);
+  --color-negative: hsl(4 65% 58%);
+  --color-warning: hsl(38 60% 55%);
+
+  --card-grad-from: hsl(240 5% 8.5%);
+  --card-grad-to: hsl(240 6% 6%);
+  --card-highlight: rgba(255, 255, 255, 0.04);
+}
+
+/* Card surface treatment: gradient, 1px border token,
+   inset top highlight, 12px radius */
+.card-surface {
+  border-radius: 12px;
+  border: 1px solid var(--color-zinc-800);
+  background: linear-gradient(165deg, var(--card-grad-from), var(--card-grad-to));
+  box-shadow: inset 0 1px 0 0 var(--card-highlight);
 }
 
 html {

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, TrendingUp, TrendingDown, Flame, Calendar, ChevronRight, Dumbbell, Trash2, Zap, Target, BarChart3, ArrowUpRight, Activity, Trophy, Settings } from 'lucide-react';
 import { AscendLogo } from '@/components/brand/AscendLogo';
-import { format, subDays, isAfter, isBefore, startOfWeek, startOfDay } from 'date-fns';
+import { format, subDays, addDays, isAfter, isBefore, startOfWeek, startOfDay } from 'date-fns';
 import { Card, CardTitle, CardValue } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Sheet } from '@/components/ui/Sheet';
@@ -25,8 +25,8 @@ import { db } from '@/db/database';
 import { useTrashCount } from '@/hooks/useTrash';
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   YAxis,
 } from 'recharts';
 
@@ -37,6 +37,7 @@ export function Dashboard() {
   const [workoutMode, setWorkoutMode] = useState<'live' | 'past'>('live');
   const [showPastForm, setShowPastForm] = useState(false);
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
+  const [pendingCardioOnly, setPendingCardioOnly] = useState(false);
   const [pastDate, setPastDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [pastDurationH, setPastDurationH] = useState('1');
   const [pastDurationM, setPastDurationM] = useState('0');
@@ -48,6 +49,16 @@ export function Dashboard() {
 
   const handleStartWorkout = async (templateId: string) => {
     if (workoutMode === 'past') {
+      // Cardio-only sessions enter duration once, in the cardio form —
+      // the details modal then only asks for the date
+      const template = await db.templates.get(templateId);
+      if (!template) return;
+      const exerciseList = await db.exercises.toArray();
+      const typeById = new Map(exerciseList.map((e) => [e.id, e.exerciseType]));
+      const cardioOnly =
+        template.exercises.length > 0 &&
+        template.exercises.every((te) => typeById.get(te.exerciseId) === 'cardio');
+      setPendingCardioOnly(cardioOnly);
       setPendingTemplateId(templateId);
       setShowPastForm(true);
       return;
@@ -62,7 +73,9 @@ export function Dashboard() {
     if (!pendingTemplateId) return;
     const template = await db.templates.get(pendingTemplateId);
     if (!template) return;
-    const durationMinutes = (parseInt(pastDurationH) || 0) * 60 + (parseInt(pastDurationM) || 0);
+    const durationMinutes = pendingCardioOnly
+      ? 0
+      : (parseInt(pastDurationH) || 0) * 60 + (parseInt(pastDurationM) || 0);
     const startedAt = new Date(pastDate + 'T12:00:00').toISOString();
     const sessionId = await startPastWorkoutSession(template, startedAt, durationMinutes);
     setPendingTemplateId(null);
@@ -116,13 +129,16 @@ export function Dashboard() {
 
   // ── Progress this week computations ────────────────────
 
-  // Last week sessions & volume
+  // Last week sessions & volume, week-to-date: only through the same
+  // weekday (inclusive) so a partial current week compares like-for-like
   const lastWeekData = useMemo(() => {
     const thisWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
     const lastWeekStart = subDays(thisWeekStart, 7);
+    // End of "today minus 7 days" = same weekday last week, inclusive
+    const lastWeekCutoff = startOfDay(subDays(new Date(), 6));
     const lastWeekSessions = sessions.filter((s) => {
       const d = new Date(s.startedAt);
-      return isAfter(d, lastWeekStart) && isBefore(d, thisWeekStart);
+      return isAfter(d, lastWeekStart) && isBefore(d, lastWeekCutoff);
     });
     const volume = lastWeekSessions.reduce((total, session) =>
       total + session.exercises.reduce((exT, ex) =>
@@ -262,9 +278,9 @@ export function Dashboard() {
     }
 
     if (volumeChange !== null && volumeChange > 0) {
-      parts.push(`Volume is up ${Math.abs(volumeChange).toFixed(0)}%.`);
+      parts.push(`Volume is up ${Math.abs(volumeChange).toFixed(0)}% vs last week to date.`);
     } else if (volumeChange !== null && volumeChange < 0) {
-      parts.push(`Volume is down ${Math.abs(volumeChange).toFixed(0)}% vs last week.`);
+      parts.push(`Volume is down ${Math.abs(volumeChange).toFixed(0)}% vs last week to date.`);
     }
 
     if (improved > 0) {
@@ -281,10 +297,43 @@ export function Dashboard() {
     return parts.join(' ') || 'Start a workout to see your progress.';
   }, [exerciseProgress, lastWeekData, weeklyVolume, plannedThisWeek, thisWeekSessions, streak]);
 
-  // Determine next planned workout
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const today = dayNames[new Date().getDay()];
-  const nextTemplate = templates.find((t) => t.day?.includes(today)) ?? templates[0];
+  // Determine next planned workout: the next UNCOMPLETED scheduled slot,
+  // walking forward from today. Completing today's session immediately
+  // advances the pointer (sessions is a live query), wrapping into the
+  // next weekly cycle when the current week is done.
+  const nextPlanned = (() => {
+    if (templates.length === 0) return null;
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    const scheduled = templates.filter((t) => (t.day ?? []).length > 0);
+    if (scheduled.length === 0) return { template: templates[0], when: null };
+
+    // Completed template ids per calendar day
+    const completedByDate = new Map<string, Set<string>>();
+    for (const s of sessions) {
+      const dateStr = format(new Date(s.startedAt), 'yyyy-MM-dd');
+      if (!completedByDate.has(dateStr)) completedByDate.set(dateStr, new Set());
+      completedByDate.get(dateStr)!.add(s.templateId);
+    }
+
+    const vacationPeriods = getVacationPeriods();
+    for (let offset = 0; offset <= 7; offset++) {
+      const date = addDays(startOfDay(new Date()), offset);
+      const dateStr = format(date, 'yyyy-MM-dd');
+      if (isDateInVacation(dateStr, vacationPeriods)) continue;
+      const dayName = dayNames[date.getDay()];
+      for (const t of scheduled) {
+        if (!t.day?.includes(dayName)) continue;
+        if (completedByDate.get(dateStr)?.has(t.id)) continue;
+        return {
+          template: t,
+          when: offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' : dayName,
+        };
+      }
+    }
+    // Every scheduled slot in the next cycle is unavailable (e.g. vacation)
+    return null;
+  })();
 
   return (
     <div className="space-y-4 px-4 pt-14 pb-4">
@@ -303,8 +352,8 @@ export function Dashboard() {
           >
             <Settings className="h-4 w-4" />
           </button>
-          <div className="flex items-center gap-2 text-sm font-medium text-zinc-500">
-            <Flame className="h-4 w-4 text-orange-500" />
+          <div className="flex items-center gap-2 text-sm font-medium text-zinc-500 tabular-nums">
+            <Flame className="h-4 w-4 text-warning" />
             {thisWeekSessions.length} this week
           </div>
         </div>
@@ -314,14 +363,14 @@ export function Dashboard() {
       {activeSession && (
         <button
           onClick={handleResumeWorkout}
-          className="flex w-full items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3.5 text-left"
+          className="card-surface flex w-full items-center gap-3 px-4 py-3.5 text-left"
         >
-          <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" />
+          <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-positive" />
           <div className="flex-1">
-            <p className="font-semibold text-emerald-400">Workout in progress</p>
-            <p className="text-xs text-emerald-500/70">{activeSession.templateName}</p>
+            <p className="font-semibold text-zinc-100">Workout in progress</p>
+            <p className="text-xs text-zinc-500">{activeSession.templateName}</p>
           </div>
-          <ChevronRight className="h-4 w-4 text-emerald-500" />
+          <ChevronRight className="h-4 w-4 text-zinc-600" />
         </button>
       )}
 
@@ -329,7 +378,7 @@ export function Dashboard() {
       {!activeSession && (
         <button
           onClick={() => setShowModeChooser(true)}
-          className="flex w-full items-center justify-center gap-3 rounded-2xl bg-white py-4 font-semibold text-zinc-900 shadow-lg shadow-white/10 active:bg-zinc-200 transition-colors"
+          className="flex w-full items-center justify-center gap-3 rounded-xl bg-white py-4 font-semibold text-zinc-950 shadow-lg shadow-white/10 active:bg-zinc-200 transition-colors"
         >
           <Plus className="h-5 w-5" strokeWidth={2.5} />
           Start Workout
@@ -346,8 +395,8 @@ export function Dashboard() {
               <span className="mb-0.5 text-sm text-zinc-500">kg</span>
               {weightTrend7d !== null && (
                 <div
-                  className={`mb-1 flex items-center gap-0.5 text-xs font-medium ${
-                    weightTrend7d <= 0 ? 'text-emerald-400' : 'text-amber-400'
+                  className={`mb-1 flex items-center gap-0.5 text-xs font-medium tabular-nums ${
+                    weightTrend7d <= 0 ? 'text-positive' : 'text-warning'
                   }`}
                 >
                   {weightTrend7d <= 0 ? (
@@ -363,16 +412,23 @@ export function Dashboard() {
           {bodyweightChartData.length > 2 && (
             <div className="h-12 w-24">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={bodyweightChartData}>
+                <AreaChart data={bodyweightChartData}>
+                  <defs>
+                    <linearGradient id="bwSparkFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.18} />
+                      <stop offset="100%" stopColor="var(--color-accent)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
                   <YAxis domain={['dataMin - 0.5', 'dataMax + 0.5']} hide />
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey="weight"
-                    stroke="var(--color-zinc-400)"
-                    strokeWidth={1.5}
+                    stroke="var(--color-accent)"
+                    strokeWidth={2}
+                    fill="url(#bwSparkFill)"
                     dot={false}
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           )}
@@ -380,7 +436,7 @@ export function Dashboard() {
       </Card>
 
       {/* Next workout */}
-      {nextTemplate && (
+      {nextPlanned?.template && (
         <Card
           onClick={() => { setWorkoutMode('live'); setShowTemplateSelector(true); }}
           className="flex items-center gap-3"
@@ -389,8 +445,11 @@ export function Dashboard() {
             <Calendar className="h-5 w-5 text-zinc-400" />
           </div>
           <div className="flex-1">
-            <p className="text-xs font-medium text-zinc-500">Next Planned</p>
-            <p className="font-semibold text-zinc-200">{nextTemplate.name}</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Next Planned</p>
+            <p className="font-semibold text-zinc-200">{nextPlanned.template.name}</p>
+            {nextPlanned.when && (
+              <p className="text-xs text-zinc-600">{nextPlanned.when}</p>
+            )}
           </div>
           <ChevronRight className="h-4 w-4 text-zinc-600" />
         </Card>
@@ -406,7 +465,7 @@ export function Dashboard() {
             <Dumbbell className="h-5 w-5 text-zinc-400" />
           </div>
           <div className="flex-1">
-            <p className="text-xs font-medium text-zinc-500">Last Workout</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Last Workout</p>
             <p className="font-semibold text-zinc-200">{lastSession.templateName}</p>
             <p className="text-xs text-zinc-600">
               {format(new Date(lastSession.startedAt), 'EEEE, MMM d')}
@@ -426,12 +485,12 @@ export function Dashboard() {
 
         <div className="grid grid-cols-2 gap-2.5">
           {/* Card 1 — Workouts completed */}
-          <div className="rounded-2xl border border-zinc-800/50 bg-zinc-900/30 px-3.5 py-3">
+          <div className="card-surface px-3.5 py-3">
             <div className="flex items-center gap-1.5 mb-1.5">
               <Target className="h-3 w-3 text-zinc-500" />
               <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Workouts</span>
             </div>
-            <p className="text-lg font-bold text-zinc-100">
+            <p className="text-lg font-semibold tabular-nums text-zinc-100">
               {thisWeekSessions.length}
               {plannedThisWeek > 0 && (
                 <span className="text-sm font-medium text-zinc-600"> / {plannedThisWeek}</span>
@@ -443,12 +502,12 @@ export function Dashboard() {
           </div>
 
           {/* Card 2 — Weekly volume */}
-          <div className="rounded-2xl border border-zinc-800/50 bg-zinc-900/30 px-3.5 py-3">
+          <div className="card-surface px-3.5 py-3">
             <div className="flex items-center gap-1.5 mb-1.5">
               <BarChart3 className="h-3 w-3 text-zinc-500" />
               <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Volume</span>
             </div>
-            <p className="text-lg font-bold text-zinc-100">
+            <p className="text-lg font-semibold tabular-nums text-zinc-100">
               {weeklyVolume >= 1000
                 ? `${(weeklyVolume / 1000).toFixed(1)}t`
                 : weeklyVolume > 0
@@ -458,8 +517,8 @@ export function Dashboard() {
             {lastWeekData.volume > 0 ? (() => {
               const pct = ((weeklyVolume - lastWeekData.volume) / lastWeekData.volume) * 100;
               return (
-                <p className={`text-[10px] font-medium ${pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {pct >= 0 ? '+' : ''}{pct.toFixed(1)}% vs last week
+                <p className={`text-[10px] font-medium tabular-nums ${pct >= 0 ? 'text-positive' : 'text-negative'}`}>
+                  {pct >= 0 ? '+' : ''}{pct.toFixed(1)}% vs last week (to {format(new Date(), 'EEE')})
                 </p>
               );
             })() : (
@@ -468,14 +527,16 @@ export function Dashboard() {
           </div>
 
           {/* Card 3 — Exercises improved */}
-          <div className="rounded-2xl border border-zinc-800/50 bg-zinc-900/30 px-3.5 py-3">
+          <div className="card-surface px-3.5 py-3">
             <div className="flex items-center gap-1.5 mb-1.5">
               <ArrowUpRight className="h-3 w-3 text-zinc-500" />
               <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Exercises</span>
             </div>
             {exerciseProgress.improved + exerciseProgress.stalled + exerciseProgress.declined > 0 ? (
               <>
-                <p className="text-lg font-bold text-emerald-400">{exerciseProgress.improved} improved</p>
+                <p className="text-lg font-semibold tabular-nums text-zinc-100">
+                  {exerciseProgress.improved} <span className="text-xs font-medium text-positive">improved</span>
+                </p>
                 <p className="text-[10px] text-zinc-500">
                   {[
                     exerciseProgress.stalled > 0 && `${exerciseProgress.stalled} stalled`,
@@ -485,31 +546,31 @@ export function Dashboard() {
               </>
             ) : (
               <>
-                <p className="text-lg font-bold text-zinc-400">—</p>
+                <p className="text-lg font-semibold text-zinc-400">—</p>
                 <p className="text-[10px] text-zinc-600">needs comparison data</p>
               </>
             )}
           </div>
 
           {/* Card 4 — Consistency */}
-          <div className="rounded-2xl border border-zinc-800/50 bg-zinc-900/30 px-3.5 py-3">
+          <div className="card-surface px-3.5 py-3">
             <div className="flex items-center gap-1.5 mb-1.5">
               <Activity className="h-3 w-3 text-zinc-500" />
               <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Consistency</span>
             </div>
             {streak > 0 ? (
               <>
-                <p className="text-lg font-bold text-zinc-100">{streak}-day streak</p>
+                <p className="text-lg font-semibold tabular-nums text-zinc-100">{streak}-day streak</p>
                 <p className="text-[10px] text-zinc-600">keep it going</p>
               </>
             ) : plannedThisWeek > 0 && thisWeekSessions.length >= plannedThisWeek ? (
               <>
-                <p className="text-lg font-bold text-emerald-400">On track</p>
+                <p className="text-lg font-semibold text-positive">On track</p>
                 <p className="text-[10px] text-zinc-600">week complete</p>
               </>
             ) : (
               <>
-                <p className="text-lg font-bold text-zinc-400">—</p>
+                <p className="text-lg font-semibold text-zinc-400">—</p>
                 <p className="text-[10px] text-zinc-600">log a workout to start</p>
               </>
             )}
@@ -518,7 +579,7 @@ export function Dashboard() {
 
         {/* Summary sentence */}
         {thisWeekSessions.length > 0 && (
-          <p className="mt-3 rounded-xl bg-zinc-800/20 px-3.5 py-2.5 text-xs leading-relaxed text-zinc-400">
+          <p className="mt-3 rounded-xl bg-zinc-900/60 px-3.5 py-2.5 text-xs leading-relaxed text-zinc-400">
             {weeklySummary}
           </p>
         )}
@@ -527,10 +588,10 @@ export function Dashboard() {
       {/* Weekly Recap */}
       <button
         onClick={() => navigate('/recap')}
-        className="flex w-full items-center gap-3 rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-500/10 to-orange-500/10 px-4 py-3.5 text-left active:from-amber-500/15 active:to-orange-500/15 transition-colors"
+        className="card-surface flex w-full items-center gap-3 px-4 py-3.5 text-left active:brightness-125 transition-[filter]"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15">
-          <Trophy className="h-5 w-5 text-amber-400" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10">
+          <Trophy className="h-5 w-5 text-warning" />
         </div>
         <div className="flex-1">
           <p className="font-semibold text-zinc-200">Weekly Recap</p>
@@ -565,10 +626,10 @@ export function Dashboard() {
               setShowModeChooser(false);
               setShowTemplateSelector(true);
             }}
-            className="flex w-full items-center gap-4 rounded-2xl border border-zinc-800/50 bg-zinc-900/50 px-4 py-4 text-left active:bg-zinc-800/50 transition-colors"
+            className="card-surface flex w-full items-center gap-4 px-4 py-4 text-left active:brightness-125 transition-[filter]"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/15">
-              <Zap className="h-5 w-5 text-emerald-400" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10">
+              <Zap className="h-5 w-5 text-accent" />
             </div>
             <div className="flex-1">
               <p className="font-semibold text-zinc-100">Start now</p>
@@ -582,10 +643,10 @@ export function Dashboard() {
               setShowModeChooser(false);
               setShowTemplateSelector(true);
             }}
-            className="flex w-full items-center gap-4 rounded-2xl border border-zinc-800/50 bg-zinc-900/50 px-4 py-4 text-left active:bg-zinc-800/50 transition-colors"
+            className="card-surface flex w-full items-center gap-4 px-4 py-4 text-left active:brightness-125 transition-[filter]"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/15">
-              <Calendar className="h-5 w-5 text-blue-400" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-800/80">
+              <Calendar className="h-5 w-5 text-zinc-400" />
             </div>
             <div className="flex-1">
               <p className="font-semibold text-zinc-100">Log previous workout</p>
@@ -606,7 +667,7 @@ export function Dashboard() {
       {/* Past workout details form */}
       <Sheet
         open={showPastForm}
-        onClose={() => { setShowPastForm(false); setPendingTemplateId(null); }}
+        onClose={() => { setShowPastForm(false); setPendingTemplateId(null); setPendingCardioOnly(false); }}
         title="Workout Details"
       >
         <div className="space-y-4">
@@ -620,6 +681,7 @@ export function Dashboard() {
               className="mt-1 w-full rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-600"
             />
           </div>
+          {!pendingCardioOnly && (
           <div>
             <label className="text-xs font-medium text-zinc-500">Duration</label>
             <div className="mt-1 flex gap-3">
@@ -653,12 +715,22 @@ export function Dashboard() {
               </div>
             </div>
           </div>
+          )}
+          {pendingCardioOnly && (
+            <p className="text-xs text-zinc-500">
+              You'll enter the duration in the cardio form.
+            </p>
+          )}
           <Button
             variant="primary"
             fullWidth
             size="lg"
             onClick={handleStartPastWorkout}
-            disabled={(parseInt(pastDurationH) || 0) === 0 && (parseInt(pastDurationM) || 0) === 0}
+            disabled={
+              !pendingCardioOnly &&
+              (parseInt(pastDurationH) || 0) === 0 &&
+              (parseInt(pastDurationM) || 0) === 0
+            }
           >
             Continue
           </Button>

@@ -26,8 +26,8 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
       <div
         className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 shadow-xl ${
           type === 'success'
-            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-            : 'border-red-500/30 bg-red-500/10 text-red-400'
+            ? 'border-positive/30 bg-positive/10 text-positive'
+            : 'border-negative/30 bg-negative/10 text-negative'
         }`}
       >
         {type === 'success' ? (
@@ -183,7 +183,7 @@ export function Settings() {
           className="flex w-full items-center gap-4 rounded-2xl border border-zinc-800/50 bg-zinc-900/50 px-4 py-4 text-left active:bg-zinc-800/50 transition-colors"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800">
-            {theme === 'dark' ? <Moon className="h-5 w-5 text-blue-400" /> : <Sun className="h-5 w-5 text-amber-400" />}
+            {theme === 'dark' ? <Moon className="h-5 w-5 text-accent" /> : <Sun className="h-5 w-5 text-warning" />}
           </div>
           <div className="flex-1">
             <p className="font-semibold text-zinc-100">Theme</p>
@@ -206,11 +206,11 @@ export function Settings() {
             disabled={exporting}
             className="flex w-full items-center gap-4 rounded-2xl border border-zinc-800/50 bg-zinc-900/50 px-4 py-4 text-left active:bg-zinc-800/50 transition-colors disabled:opacity-50"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-positive/15">
               {exporting ? (
-                <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
+                <Loader2 className="h-5 w-5 animate-spin text-positive" />
               ) : (
-                <Download className="h-5 w-5 text-emerald-400" />
+                <Download className="h-5 w-5 text-positive" />
               )}
             </div>
             <div className="flex-1">
@@ -226,11 +226,11 @@ export function Settings() {
             disabled={importing}
             className="flex w-full items-center gap-4 rounded-2xl border border-zinc-800/50 bg-zinc-900/50 px-4 py-4 text-left active:bg-zinc-800/50 transition-colors disabled:opacity-50"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15">
               {importing ? (
-                <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
+                <Loader2 className="h-5 w-5 animate-spin text-accent" />
               ) : (
-                <Upload className="h-5 w-5 text-blue-400" />
+                <Upload className="h-5 w-5 text-accent" />
               )}
             </div>
             <div className="flex-1">
@@ -291,8 +291,8 @@ export function Settings() {
               className="fixed inset-x-4 top-1/2 z-[150] mx-auto max-w-sm -translate-y-1/2 rounded-2xl border border-zinc-800 bg-zinc-925 p-5 shadow-2xl"
             >
               <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15">
-                  <Upload className="h-5 w-5 text-blue-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15">
+                  <Upload className="h-5 w-5 text-accent" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-zinc-100">Import Backup</h3>
@@ -321,10 +321,10 @@ export function Settings() {
                 ))}
               </div>
 
-              <div className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2.5">
+              <div className="mb-4 rounded-xl border border-warning/20 bg-warning/5 px-3 py-2.5">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
-                  <p className="text-xs leading-relaxed text-amber-400/90">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-warning" />
+                  <p className="text-xs leading-relaxed text-warning/90">
                     This will replace all current data on this device. A safety backup will be created automatically before importing.
                   </p>
                 </div>
@@ -367,8 +367,8 @@ export function Settings() {
               className="fixed inset-x-4 top-1/2 z-[150] mx-auto max-w-sm -translate-y-1/2 rounded-2xl border border-zinc-800 bg-zinc-925 p-5 shadow-2xl"
             >
               <div className="mb-4 flex justify-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10">
-                  <AlertTriangle className="h-7 w-7 text-red-400" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-negative/10">
+                  <AlertTriangle className="h-7 w-7 text-negative" />
                 </div>
               </div>
               <h3 className="mb-2 text-center text-lg font-bold text-zinc-100">Are you sure?</h3>
@@ -384,7 +384,7 @@ export function Settings() {
                 </button>
                 <button
                   onClick={handleConfirmImport}
-                  className="flex-1 rounded-xl bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-400 active:bg-red-500/25 transition-colors"
+                  className="flex-1 rounded-xl bg-negative/15 px-4 py-2.5 text-sm font-semibold text-negative active:bg-negative/25 transition-colors"
                 >
                   Replace All Data
                 </button>
@@ -404,7 +404,7 @@ export function Settings() {
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
           >
             <div className="text-center">
-              <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-400" />
+              <Loader2 className="mx-auto h-8 w-8 animate-spin text-accent" />
               <p className="mt-3 text-sm font-medium text-zinc-300">Restoring data...</p>
               <p className="mt-1 text-xs text-zinc-500">Do not close the app</p>
             </div>

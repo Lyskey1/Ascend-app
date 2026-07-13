@@ -73,10 +73,10 @@ function pctChange(current: number, previous: number): string {
 
 // Step count → bar color
 function stepBarColor(steps: number): string {
-  if (steps >= 10000) return '#15803d'; // dark green
-  if (steps >= 7500) return '#22c55e';  // green
-  if (steps >= 5000) return '#f59e0b';  // amber/orange
-  return '#ef4444';                      // red
+  if (steps >= 10000) return 'var(--color-positive-strong)';
+  if (steps >= 7500) return 'var(--color-positive)';
+  if (steps >= 5000) return 'var(--color-warning)';
+  return 'var(--color-negative)';
 }
 
 // ─── Component ──────────────────────────────────────────
@@ -277,8 +277,8 @@ export function StepsPage() {
               <CardValue className="text-3xl">{fmt(stats.today)}</CardValue>
               <p className="text-xs text-zinc-500 mt-1">steps</p>
             </div>
-            <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <Footprints className="h-6 w-6 text-blue-400" />
+            <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
+              <Footprints className="h-6 w-6 text-accent" />
             </div>
           </div>
         </Card>
@@ -290,12 +290,12 @@ export function StepsPage() {
           <CardTitle>7-Day Avg</CardTitle>
           <CardValue>{fmt(stats.avg7)}</CardValue>
           <div className="mt-1 flex items-center gap-1 text-xs">
-            {stats.trend === 'up' && <TrendingUp className="h-3 w-3 text-emerald-400" />}
-            {stats.trend === 'down' && <TrendingDown className="h-3 w-3 text-red-400" />}
+            {stats.trend === 'up' && <TrendingUp className="h-3 w-3 text-positive" />}
+            {stats.trend === 'down' && <TrendingDown className="h-3 w-3 text-negative" />}
             {stats.trend === 'stable' && <Minus className="h-3 w-3 text-zinc-400" />}
             <span className={
-              stats.trend === 'up' ? 'text-emerald-400' :
-              stats.trend === 'down' ? 'text-red-400' : 'text-zinc-500'
+              stats.trend === 'up' ? 'text-positive' :
+              stats.trend === 'down' ? 'text-negative' : 'text-zinc-500'
             }>
               {stats.trend === 'up' ? 'Trending up' : stats.trend === 'down' ? 'Trending down' : 'Stable'}
             </span>
@@ -314,7 +314,7 @@ export function StepsPage() {
           <CardTitle>10k+ Streak</CardTitle>
           <CardValue>{stats.streak} <span className="text-base font-normal text-zinc-500">days</span></CardValue>
           <div className="mt-1 flex items-center gap-1 text-xs text-zinc-500">
-            <Flame className="h-3 w-3 text-orange-400" />
+            <Flame className="h-3 w-3 text-warning" />
             Consecutive
           </div>
         </Card>
@@ -332,7 +332,7 @@ export function StepsPage() {
             onClick={() => setRange(r)}
             className={`rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
               range === r
-                ? 'bg-blue-500 text-white'
+                ? 'bg-accent text-white'
                 : 'bg-zinc-800/60 text-zinc-400 active:bg-zinc-700'
             }`}
           >
@@ -348,10 +348,10 @@ export function StepsPage() {
           {/* Legend */}
           <div className="flex flex-wrap gap-x-3 gap-y-1 mb-3">
             {[
-              { color: '#ef4444', label: '< 5k' },
-              { color: '#f59e0b', label: '5k–7.5k' },
-              { color: '#22c55e', label: '7.5k–10k' },
-              { color: '#15803d', label: '10k+' },
+              { color: 'var(--color-negative)', label: '< 5k' },
+              { color: 'var(--color-warning)', label: '5k–7.5k' },
+              { color: 'var(--color-positive)', label: '7.5k–10k' },
+              { color: 'var(--color-positive-strong)', label: '10k+' },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-1">
                 <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
@@ -362,16 +362,16 @@ export function StepsPage() {
           <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: -15 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-zinc-800)" strokeOpacity={0.6} vertical={false} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 10, fill: 'var(--color-zinc-500)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                   tickLine={false}
                   axisLine={false}
                   interval={range === '7d' ? 0 : 'equidistantPreserveStart'}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: 'var(--color-zinc-500)' }}
+                  tick={{ fontSize: 11, fill: 'var(--color-zinc-500)' }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(v) => fmt(v)}
@@ -405,7 +405,7 @@ export function StepsPage() {
                   <Line
                     dataKey="ma"
                     type="monotone"
-                    stroke="#60a5fa"
+                    stroke="var(--color-accent)"
                     strokeWidth={2}
                     dot={false}
                   />
@@ -423,7 +423,7 @@ export function StepsPage() {
           <CardValue className="text-xl">{fmt(stats.thisWeekAvg)}<span className="text-sm font-normal text-zinc-500"> avg</span></CardValue>
           {stats.lastWeekAvg > 0 && (
             <p className={`text-xs mt-1 ${
-              stats.thisWeekAvg >= stats.lastWeekAvg ? 'text-emerald-400' : 'text-red-400'
+              stats.thisWeekAvg >= stats.lastWeekAvg ? 'text-positive' : 'text-negative'
             }`}>
               {pctChange(stats.thisWeekAvg, stats.lastWeekAvg)} vs last week
             </p>
@@ -434,7 +434,7 @@ export function StepsPage() {
           <CardValue className="text-xl">{fmt(stats.thisMonthAvg)}<span className="text-sm font-normal text-zinc-500"> avg</span></CardValue>
           {stats.lastMonthAvg > 0 && (
             <p className={`text-xs mt-1 ${
-              stats.thisMonthAvg >= stats.lastMonthAvg ? 'text-emerald-400' : 'text-red-400'
+              stats.thisMonthAvg >= stats.lastMonthAvg ? 'text-positive' : 'text-negative'
             }`}>
               {pctChange(stats.thisMonthAvg, stats.lastMonthAvg)} vs last month
             </p>
@@ -447,8 +447,8 @@ export function StepsPage() {
         <Card>
           <CardTitle className="mb-1">Monthly Trend</CardTitle>
           <p className={`text-sm ${
-            stats.thisMonthAvg > stats.lastMonthAvg ? 'text-emerald-400' :
-            stats.thisMonthAvg < stats.lastMonthAvg ? 'text-amber-400' : 'text-zinc-400'
+            stats.thisMonthAvg > stats.lastMonthAvg ? 'text-positive' :
+            stats.thisMonthAvg < stats.lastMonthAvg ? 'text-warning' : 'text-zinc-400'
           }`}>
             {monthlyInsight}
           </p>
@@ -491,7 +491,7 @@ export function StepsPage() {
                 </button>
                 <button
                   onClick={() => handleDelete(entry.date)}
-                  className="p-1.5 text-zinc-500 active:text-red-400"
+                  className="p-1.5 text-zinc-500 active:text-negative"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -510,7 +510,7 @@ export function StepsPage() {
               type="date"
               value={formDate}
               onChange={(e) => setFormDate(e.target.value)}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-blue-500 transition-colors"
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-accent transition-colors"
             />
           </div>
           <div>
@@ -521,7 +521,7 @@ export function StepsPage() {
               placeholder="e.g. 8500"
               value={formSteps}
               onChange={(e) => setFormSteps(e.target.value)}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-blue-500 transition-colors"
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-accent transition-colors"
             />
           </div>
           <div>
@@ -531,7 +531,7 @@ export function StepsPage() {
               placeholder="e.g. Marathon day, long hike..."
               value={formNote}
               onChange={(e) => setFormNote(e.target.value)}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-blue-500 transition-colors"
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-zinc-100 text-sm outline-none focus:border-accent transition-colors"
             />
           </div>
           <Button fullWidth onClick={handleSave} disabled={!formSteps || isNaN(parseInt(formSteps, 10))}>

@@ -143,7 +143,13 @@ export function LiveWorkout() {
   const handleExerciseChange = async (index: number, updated: WorkoutSessionExercise) => {
     const newExercises = [...session.exercises];
     newExercises[index] = updated;
-    await updateSession({ ...session, exercises: newExercises });
+    const next = { ...session, exercises: newExercises };
+    // Single cardio exercise: its duration drives the session duration
+    const active = newExercises.filter((e) => !e.skipped);
+    if (active.length === 1 && active[0].exerciseType === 'cardio' && active[0].cardioDuration) {
+      next.duration = Math.round(active[0].cardioDuration * 60);
+    }
+    await updateSession(next);
   };
 
   const handleSkipExercise = async (index: number) => {
@@ -227,7 +233,7 @@ export function LiveWorkout() {
           </div>
           <button
             onClick={() => setShowFinishSheet(true)}
-            className="rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-400 active:bg-emerald-500/25"
+            className="rounded-full bg-positive/15 px-3 py-1.5 text-xs font-semibold text-positive active:bg-positive/25"
           >
             Finish
           </button>
@@ -236,7 +242,7 @@ export function LiveWorkout() {
         {/* Progress bar */}
         <div className="h-0.5 bg-zinc-800">
           <div
-            className={`h-full transition-all duration-500 ${isComplete ? 'bg-emerald-400' : 'bg-white'}`}
+            className={`h-full transition-all duration-500 ${isComplete ? 'bg-positive' : 'bg-white'}`}
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -270,11 +276,11 @@ export function LiveWorkout() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="mx-4 mb-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-center overflow-hidden relative"
+            className="mx-4 mb-3 rounded-2xl border border-positive/20 bg-positive/10 px-4 py-3 text-center overflow-hidden relative"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
-            <p className="text-sm font-semibold text-emerald-400 relative">{completionMessage}</p>
-            <p className="mt-0.5 text-xs text-emerald-500/60 relative">100% complete</p>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-positive/5 to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
+            <p className="text-sm font-semibold text-positive relative">{completionMessage}</p>
+            <p className="mt-0.5 text-xs text-positive/60 relative">100% complete</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -316,7 +322,7 @@ export function LiveWorkout() {
           </Button>
           <div className="text-center">
             {totalSetsCount > 0 && (
-              <p className={`text-xs font-medium ${isComplete ? 'text-emerald-400' : 'text-zinc-400'}`}>
+              <p className={`text-xs font-medium ${isComplete ? 'text-positive' : 'text-zinc-400'}`}>
                 {completedSetsCount}/{totalSetsCount} sets · {progressPct}%
               </p>
             )}
@@ -333,7 +339,7 @@ export function LiveWorkout() {
                     ? `${(Math.abs(diff) / 1000).toFixed(1)}t`
                     : `${Math.round(Math.abs(diff))}kg`;
                   return (
-                    <span className={diff > 0 ? 'text-emerald-400' : 'text-red-400'}>
+                    <span className={diff > 0 ? 'text-positive' : 'text-negative'}>
                       {diff > 0 ? '+' : '−'}{formatted}
                     </span>
                   );
@@ -449,7 +455,7 @@ export function LiveWorkout() {
 
 // ─── Confetti burst ────────────────────────────────────
 
-const CONFETTI_COLORS = ['#10b981', '#fbbf24', '#d4d4d8', '#a78bfa', '#34d399', '#f59e0b'];
+const CONFETTI_COLORS = ['#10b981', 'var(--color-warning)', '#d4d4d8', 'var(--color-accent)', 'var(--color-positive)', 'var(--color-warning)'];
 
 function ConfettiBurst() {
   const particles = useMemo(

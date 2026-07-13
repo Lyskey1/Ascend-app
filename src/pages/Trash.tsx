@@ -37,10 +37,10 @@ const TYPE_ICONS: Record<TrashItemType, typeof Clock> = {
 };
 
 const TYPE_COLORS: Record<TrashItemType, string> = {
-  session: 'bg-blue-500/15 text-blue-400',
+  session: 'bg-accent/15 text-accent',
   template: 'bg-purple-500/15 text-purple-400',
-  exercise: 'bg-emerald-500/15 text-emerald-400',
-  bodyweight: 'bg-amber-500/15 text-amber-400',
+  exercise: 'bg-positive/15 text-positive',
+  bodyweight: 'bg-warning/15 text-warning',
   program_group: 'bg-cyan-500/15 text-cyan-400',
 };
 
@@ -104,7 +104,7 @@ export function TrashPage() {
         {items.length > 0 && (
           <button
             onClick={() => setShowEmptyConfirm(true)}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-400 active:text-red-300 transition-colors"
+            className="rounded-lg px-3 py-1.5 text-xs font-medium text-negative active:text-red-300 transition-colors"
           >
             Empty Trash
           </button>
@@ -180,7 +180,7 @@ export function TrashPage() {
                   </button>
                   <button
                     onClick={() => setConfirmDeleteId(item.id)}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500/10 py-2 text-xs font-medium text-red-400 active:bg-red-500/20 transition-colors"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-negative/10 py-2 text-xs font-medium text-negative active:bg-negative/20 transition-colors"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Delete Forever
@@ -210,7 +210,7 @@ export function TrashPage() {
               className="fixed z-[110] inset-0 flex items-center justify-center p-4 pointer-events-none"
             >
               <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl shadow-black/50">
-                <div className="flex items-center gap-2 text-red-400 mb-3">
+                <div className="flex items-center gap-2 text-negative mb-3">
                   <AlertTriangle className="h-5 w-5" />
                   <h3 className="text-base font-semibold">Delete forever?</h3>
                 </div>
@@ -246,7 +246,7 @@ export function TrashPage() {
               className="fixed z-[110] inset-0 flex items-center justify-center p-4 pointer-events-none"
             >
               <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl shadow-black/50">
-                <div className="flex items-center gap-2 text-red-400 mb-3">
+                <div className="flex items-center gap-2 text-negative mb-3">
                   <AlertTriangle className="h-5 w-5" />
                   <h3 className="text-base font-semibold">Empty trash?</h3>
                 </div>
