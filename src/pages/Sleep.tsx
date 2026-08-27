@@ -165,7 +165,6 @@ export function SleepPage() {
   const [formHours, setFormHours] = useState('');
   const [formMinutes, setFormMinutes] = useState('');
   const [formBedtime, setFormBedtime] = useState('');
-  const [formInterruptions, setFormInterruptions] = useState('');
   const [formNote, setFormNote] = useState('');
 
   // Derived wake-up time (auto-calculated)
@@ -292,7 +291,6 @@ export function SleepPage() {
     setFormHours('');
     setFormMinutes('');
     setFormBedtime('');
-    setFormInterruptions('');
     setFormNote('');
     setEditDate(null);
     setShowAdd(true);
@@ -306,7 +304,6 @@ export function SleepPage() {
     setFormHours(String(h));
     setFormMinutes(m > 0 ? String(m) : '');
     setFormBedtime(entry.bedtime || '');
-    setFormInterruptions(entry.interruptions != null ? String(entry.interruptions) : '');
     setFormNote(entry.note || '');
     setEditDate(entry.date);
     setShowAdd(true);
@@ -329,9 +326,10 @@ export function SleepPage() {
       // Auto-calculate wake-up time
       entry.wakeUpTime = calcWakeUpTime(formBedtime, duration);
     }
-    if (formInterruptions) {
-      const n = parseInt(formInterruptions, 10);
-      if (!isNaN(n)) entry.interruptions = n;
+    if (editDate) {
+      // Preserve a previously stored interruptions value (field removed from the form)
+      const existing = entries.find((e) => e.date === editDate);
+      if (existing?.interruptions != null) entry.interruptions = existing.interruptions;
     }
     if (formNote.trim()) entry.note = formNote.trim();
 
@@ -678,7 +676,6 @@ export function SleepPage() {
                   </div>
                   <p className="text-xs text-zinc-500 ml-[22px]">
                     {format(new Date(entry.date), 'EEE, MMM d yyyy')}
-                    {entry.interruptions != null && ` · ${entry.interruptions} wake-ups`}
                     {entry.note && <> · {entry.note}</>}
                   </p>
                 </div>
@@ -777,19 +774,6 @@ export function SleepPage() {
                     <span className="text-zinc-600 ml-1">(auto-calculated)</span>
                   </p>
                 )}
-              </div>
-
-              <div>
-                <label className="block text-xs text-zinc-400 mb-1">Wake-ups / Interruptions</label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  placeholder="0"
-                  value={formInterruptions}
-                  onChange={(e) => setFormInterruptions(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-zinc-100 text-sm outline-none focus:border-accent transition-colors"
-                />
               </div>
 
               <div>
