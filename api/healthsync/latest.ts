@@ -1,10 +1,11 @@
 import type { VercelRequest, VercelResponse } from '../_lib/vercel.js';
-import { head, BlobNotFoundError } from '@vercel/blob';
+import { get } from '@vercel/blob';
 import { HEALTHSYNC_BLOB_PATHNAME } from '../_lib/validate.js';
 
 // GET /api/healthsync/latest — the PWA polls this on boot.
-// No token required: the data is non-sensitive daily fitness numbers.
-async function get(req: VercelRequest, res: VercelResponse) {
+// No token required from the caller: the data is non-sensitive daily
+// fitness numbers, and this endpoint is the only reader of the blob.
+async function get_(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -19,28 +20,33 @@ async function get(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  let meta;
-  try {
-    meta = await head(HEALTHSYNC_BLOB_PATHNAME);
-  } catch (err) {
-    // Nothing POSTed yet is a normal empty state, not an error.
-    if (err instanceof BlobNotFoundError) return res.status(200).json({ payload: null });
-    throw err;
+  // Read the blob server-side. The store is private, so there is no public
+  // URL to fetch — get() authenticates with BLOB_READ_WRITE_TOKEN and
+  // streams the content back to us. That keeps the credential on the
+  // server: the PWA only ever talks to this endpoint.
+  // useCache: false reads from origin, so a POST is visible immediately
+  // instead of waiting out the blob's own cache TTL.
+  const result = await get(HEALTHSYNC_BLOB_PATHNAME, {
+    access: 'private',
+    useCache: false,
+  });
+
+  // null = nothing POSTed yet. A normal empty state, not an error.
+  if (!result) return res.status(200).json({ payload: null });
+
+  // 304 needs an ifNoneMatch, which we never send, so a missing stream
+  // here means something unexpected rather than "not modified".
+  if (result.statusCode !== 200 || !result.stream) {
+    return res.status(200).json({ payload: null });
   }
 
-  // The blob URL is stable (no random suffix), so bust the CDN cache to
-  // always serve the most recently POSTed payload.
-  const blobRes = await fetch(`${meta.url}?v=${Date.now()}`, { cache: 'no-store' });
-  if (!blobRes.ok) {
-    return res.status(503).json({ error: `Failed to read stored payload (${blobRes.status}).` });
-  }
-  const payload: unknown = await blobRes.json();
+  const payload: unknown = await new Response(result.stream).json();
   return res.status(200).json({ payload });
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    return await get(req, res);
+    return await get_(req, res);
   } catch (err) {
     console.error('[healthsync] GET failed:', err);
     if (res.headersSent) return;

@@ -47,11 +47,16 @@ async function post(req: VercelRequest, res: VercelResponse) {
     HEALTHSYNC_BLOB_PATHNAME,
     JSON.stringify({ ...payload, receivedAt: new Date().toISOString() }),
     {
-      access: 'public',
+      // The store is configured with private access; 'public' (the SDK
+      // default) is rejected outright. Privacy costs nothing here: the
+      // payload reaches the PWA through our own GET endpoint, which reads
+      // the blob server-side with BLOB_READ_WRITE_TOKEN, so the client
+      // never needs Blob credentials or a public URL.
+      access: 'private',
       addRandomSuffix: false,
       allowOverwrite: true,
       contentType: 'application/json',
-      cacheControlMaxAge: 60, // minimum allowed; GET busts the CDN cache anyway
+      cacheControlMaxAge: 60, // minimum allowed; the GET reads with useCache: false anyway
     },
   );
 
