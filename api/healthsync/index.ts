@@ -1,13 +1,15 @@
 import type { VercelRequest, VercelResponse } from '../_lib/vercel';
 import { put } from '@vercel/blob';
-import {
-  validateHealthSyncPayload,
-  HEALTHSYNC_BLOB_PATHNAME,
-} from '../../src/services/healthSyncSchema';
+import { validateHealthSyncPayload, HEALTHSYNC_BLOB_PATHNAME } from '../_lib/validate';
 
 // POST /api/healthsync — relay endpoint for the daily iOS Shortcut.
 // Stores the single "latest payload" in Vercel Blob, overwritten each time.
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+//
+// Every import above stays inside api/ (or is the @vercel/blob dependency,
+// which Vercel installs into the function). Nothing reaches into src/ —
+// Vercel bundles only api/, so such an import throws ERR_MODULE_NOT_FOUND
+// at runtime even though it compiles cleanly.
+async function post(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -35,28 +37,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return res
-      .status(503)
-      .json({ error: 'Blob store is not provisioned (BLOB_READ_WRITE_TOKEN missing). Create a Vercel Blob store for this project.' });
-  }
-
-  try {
-    await put(
-      HEALTHSYNC_BLOB_PATHNAME,
-      JSON.stringify({ ...payload, receivedAt: new Date().toISOString() }),
-      {
-        access: 'public',
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        contentType: 'application/json',
-        cacheControlMaxAge: 60, // minimum allowed; GET busts the CDN cache anyway
-      },
-    );
-  } catch (err) {
     return res.status(503).json({
-      error: `Failed to store payload: ${err instanceof Error ? err.message : 'unknown error'}`,
+      error:
+        'Blob store is not provisioned (BLOB_READ_WRITE_TOKEN missing). Create a Vercel Blob store for this project.',
     });
   }
 
+  await put(
+    HEALTHSYNC_BLOB_PATHNAME,
+    JSON.stringify({ ...payload, receivedAt: new Date().toISOString() }),
+    {
+      access: 'public',
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      contentType: 'application/json',
+      cacheControlMaxAge: 60, // minimum allowed; GET busts the CDN cache anyway
+    },
+  );
+
   return res.status(200).json({ ok: true });
+}
+
+// Any unexpected throw becomes a short JSON 500 rather than an opaque
+// crash, so failures are visible from curl instead of only in the logs.
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    return await post(req, res);
+  } catch (err) {
+    console.error('[healthsync] POST failed:', err);
+    if (res.headersSent) return;
+    return res
+      .status(500)
+      .json({ error: err instanceof Error ? err.message : 'Internal error' });
+  }
 }
