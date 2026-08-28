@@ -1,28 +1,29 @@
 import { db } from '@/db/database';
 import type { SleepEntry, StepEntry } from '@/db/types';
+import { validateHealthSyncPayload, type HealthSyncPayload } from './healthSyncSchema';
 
 // ─── Apple Health auto-sync ─────────────────────────────
-// An iOS Shortcut opens the app daily with ?healthsync=<base64 JSON>
-// describing yesterday's health data. The date inside the payload is
-// already resolved in the device's local timezone — treat it as an
-// opaque calendar day, never re-derive it from the browser clock.
+// Two transports feed the same ingestion path:
+// 1. URL param — an iOS Shortcut opens the app with ?healthsync=<base64
+//    JSON>. Works in Safari, but not for the installed PWA (its storage
+//    is isolated from Safari).
+// 2. Relay (primary) — the Shortcut POSTs the payload to /api/healthsync;
+//    the app fetches /api/healthsync/latest on every boot.
+// The date inside the payload is already resolved in the device's local
+// timezone — treat it as an opaque calendar day, never re-derive it from
+// the browser clock.
 
-export interface HealthSyncPayload {
-  date: string; // YYYY-MM-DD
-  steps: number;
-  sleepMinutes: number;
-  bedtime?: string; // HH:mm
-  wakeups: number;
-  weightKg?: number;
-}
+export type { HealthSyncPayload };
+export { validateHealthSyncPayload };
 
 export type HealthSyncResult =
-  | { status: 'none' } // no healthsync param present
-  | { status: 'invalid' } // param present but payload rejected
-  | { status: 'synced'; updated: boolean }; // updated = an entry for that date already existed
+  | { status: 'none' } // nothing to ingest (no param / no relay payload / fetch failed)
+  | { status: 'invalid' } // payload present but rejected
+  | { status: 'synced'; updated: boolean; changed: boolean };
+// updated = an entry for that date already existed
+// changed = ingestion actually created or modified stored data
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const RELAY_TIMEOUT_MS = 4000;
 
 function decodePayload(raw: string): unknown {
   // URLSearchParams decodes '+' to space; also tolerate base64url variants.
@@ -31,32 +32,6 @@ function decodePayload(raw: string): unknown {
   const bin = atob(b64);
   const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
   return JSON.parse(new TextDecoder().decode(bytes));
-}
-
-function isInt(v: unknown, min: number, max: number): v is number {
-  return typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
-}
-
-export function validateHealthSyncPayload(data: unknown): HealthSyncPayload | null {
-  if (typeof data !== 'object' || data === null || Array.isArray(data)) return null;
-  const d = data as Record<string, unknown>;
-
-  if (typeof d.date !== 'string' || !DATE_RE.test(d.date)) return null;
-  if (!isInt(d.steps, 0, 100000)) return null;
-  if (!isInt(d.sleepMinutes, 0, 1000)) return null;
-  if (d.bedtime !== undefined && (typeof d.bedtime !== 'string' || !TIME_RE.test(d.bedtime))) return null;
-  if (!isInt(d.wakeups, 0, 50)) return null;
-  if (d.weightKg !== undefined && (typeof d.weightKg !== 'number' || !Number.isFinite(d.weightKg) || d.weightKg < 30 || d.weightKg > 200)) return null;
-
-  const payload: HealthSyncPayload = {
-    date: d.date,
-    steps: d.steps,
-    sleepMinutes: d.sleepMinutes,
-    wakeups: d.wakeups,
-  };
-  if (d.bedtime !== undefined) payload.bedtime = d.bedtime;
-  if (d.weightKg !== undefined) payload.weightKg = d.weightKg;
-  return payload;
 }
 
 // ─── Sleep score (Apple's public formula) ───────────────
@@ -123,6 +98,88 @@ function calcWakeUpTime(bedtime: string, durationMinutes: number): string {
 
 // ─── Ingestion ──────────────────────────────────────────
 
+// Flat-entry comparison where a missing key equals an undefined value.
+function entriesEqual(a: Record<string, unknown> | undefined, b: Record<string, unknown>): boolean {
+  if (!a) return false;
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) if (a[k] !== b[k]) return false;
+  return true;
+}
+
+/**
+ * Read-modify-write scoped to the payload date, atomic across tables:
+ * either everything for that day is written, or nothing is. Idempotent —
+ * when the stored data already matches, nothing is written at all.
+ */
+export async function ingestHealthSyncPayload(
+  p: HealthSyncPayload,
+): Promise<{ updated: boolean; changed: boolean }> {
+  return db.transaction('rw', [db.steps, db.sleep, db.bodyweight], async () => {
+    const [existingSteps, existingSleep] = await Promise.all([
+      db.steps.get(p.date),
+      db.sleep.get(p.date),
+    ]);
+
+    // Steps: overwrite the count, keep a manual note if one exists.
+    const stepEntry: StepEntry = { date: p.date, stepCount: p.steps };
+    if (existingSteps?.note) stepEntry.note = existingSteps.note;
+
+    // Bedtime history for the consistency score: last 13 stored nights
+    // strictly before the synced date, keeping only those with a bedtime.
+    const prior = await db.sleep.where('date').below(p.date).toArray();
+    prior.sort((a, b) => b.date.localeCompare(a.date));
+    const priorBedtimes = prior
+      .slice(0, 13)
+      .map((e) => e.bedtime)
+      .filter((t): t is string => !!t);
+
+    const sleepEntry: SleepEntry = {
+      date: p.date,
+      sleepScore: computeSleepScore(p.sleepMinutes, p.bedtime, p.wakeups, priorBedtimes),
+      sleepDuration: p.sleepMinutes,
+      interruptions: p.wakeups,
+    };
+    if (p.bedtime) {
+      sleepEntry.bedtime = p.bedtime;
+      sleepEntry.wakeUpTime = calcWakeUpTime(p.bedtime, p.sleepMinutes);
+    }
+    if (existingSleep?.note) sleepEntry.note = existingSleep.note;
+
+    // Weight: only when present in the payload; update the existing entry
+    // for that date if there is one, otherwise add a single new entry.
+    let sameDayWeight: import('@/db/types').BodyweightEntry | undefined;
+    let weightChanged = false;
+    if (p.weightKg !== undefined) {
+      sameDayWeight = (await db.bodyweight.where('date').equals(p.date).toArray())[0];
+      weightChanged = sameDayWeight?.weight !== p.weightKg;
+    }
+
+    const changed =
+      !entriesEqual(existingSteps as Record<string, unknown> | undefined, stepEntry as unknown as Record<string, unknown>) ||
+      !entriesEqual(existingSleep as Record<string, unknown> | undefined, sleepEntry as unknown as Record<string, unknown>) ||
+      weightChanged;
+
+    if (changed) {
+      await db.steps.put(stepEntry);
+      await db.sleep.put(sleepEntry);
+      if (p.weightKg !== undefined && weightChanged) {
+        if (sameDayWeight) {
+          await db.bodyweight.update(sameDayWeight.id, { weight: p.weightKg });
+        } else {
+          await db.bodyweight.add({ id: crypto.randomUUID(), date: p.date, weight: p.weightKg });
+        }
+      }
+    }
+
+    return {
+      updated: existingSteps !== undefined || existingSleep !== undefined,
+      changed,
+    };
+  });
+}
+
+// ─── URL-param transport ────────────────────────────────
+
 function cleanUrl() {
   const url = new URL(window.location.href);
   url.searchParams.delete('healthsync');
@@ -147,56 +204,43 @@ export async function runHealthSync(): Promise<HealthSyncResult> {
     console.warn('[healthsync] Invalid payload — ignored.');
     return { status: 'invalid' };
   }
-  const p = payload;
 
-  // Read-modify-write scoped to the payload date, atomic across tables:
-  // either everything for that day is written, or nothing is.
-  const updated = await db.transaction('rw', [db.steps, db.sleep, db.bodyweight], async () => {
-    const [existingSteps, existingSleep] = await Promise.all([
-      db.steps.get(p.date),
-      db.sleep.get(p.date),
-    ]);
+  const { updated, changed } = await ingestHealthSyncPayload(payload);
+  return { status: 'synced', updated, changed };
+}
 
-    // Steps: overwrite the count, keep a manual note if one exists.
-    const stepEntry: StepEntry = { date: p.date, stepCount: p.steps };
-    if (existingSteps?.note) stepEntry.note = existingSteps.note;
-    await db.steps.put(stepEntry);
+// ─── Relay transport (primary for the installed PWA) ────
 
-    // Bedtime history for the consistency score: last 13 stored nights
-    // strictly before the synced date, keeping only those with a bedtime.
-    const prior = await db.sleep.where('date').below(p.date).toArray();
-    prior.sort((a, b) => b.date.localeCompare(a.date));
-    const priorBedtimes = prior
-      .slice(0, 13)
-      .map((e) => e.bedtime)
-      .filter((t): t is string => !!t);
-
-    const sleepEntry: SleepEntry = {
-      date: p.date,
-      sleepScore: computeSleepScore(p.sleepMinutes, p.bedtime, p.wakeups, priorBedtimes),
-      sleepDuration: p.sleepMinutes,
-      interruptions: p.wakeups,
-    };
-    if (p.bedtime) {
-      sleepEntry.bedtime = p.bedtime;
-      sleepEntry.wakeUpTime = calcWakeUpTime(p.bedtime, p.sleepMinutes);
+export async function runHealthSyncFromRelay(): Promise<HealthSyncResult> {
+  let data: unknown;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), RELAY_TIMEOUT_MS);
+    try {
+      const res = await fetch('/api/healthsync/latest', {
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      if (!res.ok) return { status: 'none' };
+      data = await res.json();
+    } finally {
+      clearTimeout(timer);
     }
-    if (existingSleep?.note) sleepEntry.note = existingSleep.note;
-    await db.sleep.put(sleepEntry);
+  } catch {
+    // Offline, timeout, or malformed response — never block or break boot.
+    return { status: 'none' };
+  }
 
-    // Weight: only when present in the payload; update the existing entry
-    // for that date if there is one, otherwise add a single new entry.
-    if (p.weightKg !== undefined) {
-      const sameDay = await db.bodyweight.where('date').equals(p.date).toArray();
-      if (sameDay.length > 0) {
-        await db.bodyweight.update(sameDay[0].id, { weight: p.weightKg });
-      } else {
-        await db.bodyweight.add({ id: crypto.randomUUID(), date: p.date, weight: p.weightKg });
-      }
-    }
+  const wrapped = data as { payload?: unknown } | null | undefined;
+  if (!wrapped || wrapped.payload == null) return { status: 'none' };
 
-    return existingSteps !== undefined || existingSleep !== undefined;
-  });
+  // Extra server fields (e.g. receivedAt) are dropped by validation.
+  const payload = validateHealthSyncPayload(wrapped.payload);
+  if (!payload) {
+    console.warn('[healthsync] Invalid relay payload — ignored.');
+    return { status: 'invalid' };
+  }
 
-  return { status: 'synced', updated };
+  const { updated, changed } = await ingestHealthSyncPayload(payload);
+  return { status: 'synced', updated, changed };
 }

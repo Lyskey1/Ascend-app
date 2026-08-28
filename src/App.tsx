@@ -18,7 +18,7 @@ import { WeeklyRecap } from '@/pages/WeeklyRecap';
 import { Settings } from '@/pages/Settings';
 import { seedDatabase } from '@/db/seed';
 import { syncExerciseLibrary } from '@/db/database';
-import { runHealthSync } from '@/services/healthSync';
+import { runHealthSync, runHealthSyncFromRelay } from '@/services/healthSync';
 import { ThemeProvider } from '@/hooks/useTheme';
 
 export default function App() {
@@ -26,19 +26,37 @@ export default function App() {
   const [syncToast, setSyncToast] = useState<string | null>(null);
 
   useEffect(() => {
+    let toastTimer: ReturnType<typeof setTimeout> | undefined;
+    const showToast = (message: string) => {
+      if (toastTimer) clearTimeout(toastTimer);
+      setSyncToast(message);
+      toastTimer = setTimeout(() => setSyncToast(null), 4000);
+    };
+
     (async () => {
       await seedDatabase();
       await syncExerciseLibrary();
       try {
         const result = await runHealthSync();
         if (result.status === 'synced') {
-          setSyncToast(result.updated ? 'Updated from Apple Health' : 'Synced from Apple Health');
-          setTimeout(() => setSyncToast(null), 4000);
+          showToast(result.updated ? 'Updated from Apple Health' : 'Synced from Apple Health');
         }
       } catch (err) {
         console.warn('[healthsync] Sync failed:', err);
       }
       setReady(true);
+
+      // Relay transport — primary path for the installed PWA, whose storage
+      // is isolated from Safari so the URL param above can't reach it. Runs
+      // after boot is unblocked; toasts only when data actually changed.
+      try {
+        const relay = await runHealthSyncFromRelay();
+        if (relay.status === 'synced' && relay.changed) {
+          showToast(relay.updated ? 'Updated from Apple Health' : 'Synced from Apple Health');
+        }
+      } catch (err) {
+        console.warn('[healthsync] Relay sync failed:', err);
+      }
     })();
   }, []);
 
