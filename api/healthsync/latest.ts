@@ -1,6 +1,6 @@
-import type { VercelRequest, VercelResponse } from '../_lib/vercel';
+import type { VercelRequest, VercelResponse } from '../_lib/vercel.js';
 import { head, BlobNotFoundError } from '@vercel/blob';
-import { HEALTHSYNC_BLOB_PATHNAME } from '../_lib/validate';
+import { HEALTHSYNC_BLOB_PATHNAME } from '../_lib/validate.js';
 
 // GET /api/healthsync/latest — the PWA polls this on boot.
 // No token required: the data is non-sensitive daily fitness numbers.

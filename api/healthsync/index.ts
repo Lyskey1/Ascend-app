@@ -1,6 +1,6 @@
-import type { VercelRequest, VercelResponse } from '../_lib/vercel';
+import type { VercelRequest, VercelResponse } from '../_lib/vercel.js';
 import { put } from '@vercel/blob';
-import { validateHealthSyncPayload, HEALTHSYNC_BLOB_PATHNAME } from '../_lib/validate';
+import { validateHealthSyncPayload, HEALTHSYNC_BLOB_PATHNAME } from '../_lib/validate.js';
 
 // POST /api/healthsync — relay endpoint for the daily iOS Shortcut.
 // Stores the single "latest payload" in Vercel Blob, overwritten each time.
